@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import get_settings
+from app.routers import auth, properties
 
 settings = get_settings()
 
@@ -11,7 +13,7 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Configure CORS (for frontend to connect)
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],  # Vite dev server
@@ -21,13 +23,14 @@ app.add_middleware(
 )
 
 
-# Health check endpoint
+# Health check endpoints
 @app.get("/")
 async def root():
     return {
         "message": "CoLiv OS API",
         "status": "running",
-        "environment": settings.environment
+        "environment": settings.environment,
+        "version": "0.1.0"
     }
 
 
@@ -36,9 +39,6 @@ async def health_check():
     return {"status": "healthy"}
 
 
-# We'll add routers here as we build features
-# from app.routers import properties, units, rooms, tenants
-# app.include_router(properties.router)
-# app.include_router(units.router)
-# app.include_router(rooms.router)
-# app.include_router(tenants.router)
+# Include routers
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(properties.router, prefix="/api/v1")
