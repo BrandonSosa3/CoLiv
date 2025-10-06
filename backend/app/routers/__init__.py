@@ -1,3 +1,3 @@
-from app.routers import auth, properties, units, rooms
+from app.routers import auth, properties, units, rooms, tenants
 
-__all__ = ["auth", "properties", "units", "rooms"]
+__all__ = ["auth", "properties", "units", "rooms", "tenants"]
