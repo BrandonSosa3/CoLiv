@@ -1,3 +1,11 @@
-from app.routers import auth, properties, units, rooms, tenants
+import app.routers.auth as auth
+import app.routers.properties as properties
+import app.routers.units as units
+import app.routers.rooms as rooms
+import app.routers.tenants as tenants
+import app.routers.payments as payments
+import app.routers.dashboard as dashboard
+import app.routers.maintenance as maintenance
+import app.routers.announcements as announcements
 
-__all__ = ["auth", "properties", "units", "rooms", "tenants"]
+__all__ = ["auth", "properties", "units", "rooms", "tenants", "payments", "dashboard", "maintenance", "announcements"]
