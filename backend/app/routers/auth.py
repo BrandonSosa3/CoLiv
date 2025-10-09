@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.operator import Operator
 from app.schemas.user import UserCreate, UserResponse, Token
-from app.utils.auth import get_password_hash, verify_password, create_access_token
+from app.utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from app.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -70,3 +70,25 @@ def login(
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete user account and all associated data
+    
+    This performs a CASCADE delete:
+    - User account
+    - Operator/Tenant profile
+    - All properties, units, rooms (if operator)
+    - All tenant assignments, payments (if tenant)
+    """
+    
+    # Delete the user (CASCADE will handle related records)
+    db.delete(current_user)
+    db.commit()
+    
+    return None
