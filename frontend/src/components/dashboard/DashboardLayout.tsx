@@ -1,101 +1,70 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/Button'
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  LogOut,
-  Menu,
-  X
-} from 'lucide-react'
-import { useState } from 'react'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Building2, Users, DollarSign, LogOut, Home } from 'lucide-react'
 
 export function DashboardLayout() {
   const navigate = useNavigate()
-  const logout = useAuthStore((state) => state.logout)
-  const user = useAuthStore((state) => state.user)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
 
   const handleLogout = () => {
-    logout()
+    localStorage.removeItem('token')
     navigate('/login')
   }
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Building2, label: 'Properties', path: '/dashboard/properties' },
-    { icon: Users, label: 'Tenants', path: '/dashboard/tenants' },
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/dashboard/properties', icon: Building2, label: 'Properties' },
+    { path: '/dashboard/tenants', icon: Users, label: 'Tenants' },
+    { path: '/dashboard/payments', icon: DollarSign, label: 'Payments' },
   ]
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="flex h-screen bg-black">
       {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-[#141414] border-r border-[#2c2c2e]
-        transform transition-transform duration-200 ease-in-out
-        lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-6 border-b border-[#2c2c2e]">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
-              CoLiv OS
-            </h1>
-            <p className="text-sm text-[#636366] mt-1">{user?.email}</p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#98989d] hover:text-white hover:bg-[#1c1c1e] transition-colors"
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Logout */}
-          <div className="p-4 border-t border-[#2c2c2e]">
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-5 h-5 mr-3" />
-              Logout
-            </Button>
-          </div>
+      <div className="w-64 bg-[#1c1c1e] border-r border-[#2c2c2e] flex flex-col">
+        <div className="p-6 border-b border-[#2c2c2e]">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
+            CoLiv OS
+          </h1>
         </div>
-      </aside>
 
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-[#1c1c1e] text-white"
-      >
-        {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            const Icon = item.icon
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white'
+                    : 'text-[#98989d] hover:bg-[#2c2c2e]'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </nav>
 
-      {/* Main content */}
-      <main className="lg:pl-64">
-        <div className="p-6 lg:p-8">
+        <div className="p-4 border-t border-[#2c2c2e]">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#ff453a] hover:bg-[#ff453a]/10 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-8">
           <Outlet />
         </div>
-      </main>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      </div>
     </div>
   )
 }

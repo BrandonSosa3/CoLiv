@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { propertiesApi } from '@/lib/api/properties'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { CreatePropertyModal } from '@/components/properties/CreatePropertyModal'
 import { Building2, MapPin, Plus, ArrowRight } from 'lucide-react'
@@ -11,6 +12,7 @@ import { Building2, MapPin, Plus, ArrowRight } from 'lucide-react'
 export function PropertiesPage() {
   const navigate = useNavigate()
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ['properties'],
@@ -20,6 +22,17 @@ export function PropertiesPage() {
   if (isLoading) {
     return <LoadingScreen message="Loading properties..." />
   }
+
+  // Filter properties based on search
+  const filteredProperties = properties?.filter((property) => {
+    const searchLower = searchQuery.toLowerCase()
+    return (
+      property.name.toLowerCase().includes(searchLower) ||
+      property.city.toLowerCase().includes(searchLower) ||
+      property.state.toLowerCase().includes(searchLower) ||
+      property.address.toLowerCase().includes(searchLower)
+    )
+  })
 
   return (
     <div className="space-y-8">
@@ -35,6 +48,17 @@ export function PropertiesPage() {
           Add Property
         </Button>
       </div>
+
+      {/* Search Bar */}
+      {properties && properties.length > 0 && (
+        <div className="max-w-md">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search properties by name, city, or address..."
+          />
+        </div>
+      )}
 
       {properties?.length === 0 && (
         <Card>
@@ -56,9 +80,9 @@ export function PropertiesPage() {
         </Card>
       )}
 
-      {properties && properties.length > 0 && (
+      {filteredProperties && filteredProperties.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
+          {filteredProperties.map((property) => (
             <Card
               key={property.id}
               className="group cursor-pointer hover:border-[#667eea] transition-colors"
@@ -90,6 +114,24 @@ export function PropertiesPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* No Results */}
+      {filteredProperties && filteredProperties.length === 0 && searchQuery && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-[#98989d]">
+              No properties found matching "{searchQuery}"
+            </p>
+            <Button
+              variant="ghost"
+              onClick={() => setSearchQuery('')}
+              className="mt-4"
+            >
+              Clear Search
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {showCreateModal && (

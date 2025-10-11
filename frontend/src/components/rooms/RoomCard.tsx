@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { tenantsApi } from '@/lib/api/tenants'
 import { Room } from '@/types'
-import { DoorOpen, Check, X, Plus, User } from 'lucide-react'
+import { DoorOpen, Check, X, Plus, User, Edit2, UserX } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { AssignTenantModal } from './AssignTenantModal'
+import { EditRoomModal } from './EditRoomModal'
+import { RemoveTenantDialog } from '@/components/tenants/RemoveTenantDialog'
 
 interface RoomCardProps {
   room: Room
@@ -11,6 +15,17 @@ interface RoomCardProps {
 
 export function RoomCard({ room }: RoomCardProps) {
   const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false)
+
+  // Fetch tenant info if room is occupied
+  const { data: tenants } = useQuery({
+    queryKey: ['room-tenant', room.id],
+    queryFn: () => tenantsApi.getByRoom(room.id),
+    enabled: room.status === 'occupied',
+  })
+
+  const tenant = tenants?.[0]
 
   const statusColors = {
     vacant: 'bg-[#32d74b]/10 text-[#32d74b] border-[#32d74b]/20',
@@ -28,9 +43,18 @@ export function RoomCard({ room }: RoomCardProps) {
             </div>
             <span className="font-semibold text-white">Room {room.room_number}</span>
           </div>
-          <span className={`px-2 py-0.5 rounded text-xs border ${statusColors[room.status]}`}>
-            {room.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="p-1 rounded hover:bg-[#2c2c2e] transition-colors"
+              title="Edit room"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-[#98989d] hover:text-[#667eea]" />
+            </button>
+            <span className={`px-2 py-0.5 rounded text-xs border ${statusColors[room.status]}`}>
+              {room.status}
+            </span>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -69,10 +93,23 @@ export function RoomCard({ room }: RoomCardProps) {
           </Button>
         )}
 
-        {room.status === 'occupied' && (
-          <div className="mt-4 pt-4 border-t border-[#2c2c2e] flex items-center gap-2 text-sm text-[#98989d]">
-            <User className="w-4 h-4" />
-            <span>Tenant assigned</span>
+        {room.status === 'occupied' && tenant && (
+          <div className="mt-4 pt-4 border-t border-[#2c2c2e]">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-sm text-[#98989d]">
+                <User className="w-4 h-4" />
+                <span className="truncate">{tenant.email}</span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="danger"
+              className="w-full"
+              onClick={() => setShowRemoveDialog(true)}
+            >
+              <UserX className="w-4 h-4 mr-2" />
+              Remove Tenant
+            </Button>
           </div>
         )}
       </div>
@@ -83,6 +120,22 @@ export function RoomCard({ room }: RoomCardProps) {
           roomNumber={room.room_number}
           rentAmount={Number(room.rent_amount)}
           onClose={() => setShowAssignModal(false)}
+        />
+      )}
+
+      {showEditModal && (
+        <EditRoomModal
+          room={room}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
+      {showRemoveDialog && tenant && (
+        <RemoveTenantDialog
+          tenantId={tenant.id}
+          tenantEmail={tenant.email}
+          roomNumber={room.room_number}
+          onClose={() => setShowRemoveDialog(false)}
         />
       )}
     </>

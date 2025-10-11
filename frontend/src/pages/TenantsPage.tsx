@@ -1,17 +1,22 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { propertiesApi } from '@/lib/api/properties'
 import { tenantsApi } from '@/lib/api/tenants'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { Users, Mail, Home, Calendar } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 export function TenantsPage() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+
   const { data: properties } = useQuery({
     queryKey: ['properties'],
     queryFn: propertiesApi.getAll,
   })
 
-  // Get tenants for all properties
   const tenantQueries = useQuery({
     queryKey: ['all-tenants', properties?.map(p => p.id)],
     queryFn: async () => {
@@ -24,6 +29,28 @@ export function TenantsPage() {
   })
 
   const allTenants = tenantQueries.data || []
+
+  // Apply filters
+  const filteredTenants = allTenants.filter((tenant) => {
+    // Status filter
+    if (statusFilter !== 'all' && tenant.status !== statusFilter) {
+      return false
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase()
+      return (
+        tenant.email.toLowerCase().includes(searchLower) ||
+        tenant.property_name.toLowerCase().includes(searchLower) ||
+        tenant.unit_number.toLowerCase().includes(searchLower) ||
+        tenant.room_number.toLowerCase().includes(searchLower)
+      )
+    }
+
+    return true
+  })
+
   const activeTenants = allTenants.filter(t => t.status === 'active')
 
   return (
@@ -68,6 +95,30 @@ export function TenantsPage() {
         </Card>
       </div>
 
+      {/* Search & Filters */}
+      {allTenants.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search by email, property, unit, or room..."
+            />
+          </div>
+          <FilterDropdown
+            label="Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'active', label: 'Active' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'moved_out', label: 'Moved Out' },
+            ]}
+          />
+        </div>
+      )}
+
       {/* Tenants List */}
       {allTenants.length === 0 ? (
         <Card>
@@ -83,14 +134,46 @@ export function TenantsPage() {
             </p>
           </CardContent>
         </Card>
+      ) : filteredTenants.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-[#98989d] mb-4">
+              No tenants found matching your search
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setStatusFilter('all')
+              }}
+              className="text-[#667eea] hover:underline"
+            >
+              Clear filters
+            </button>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-white">All Tenants</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">
+                {filteredTenants.length} {filteredTenants.length === 1 ? 'Tenant' : 'Tenants'}
+              </h2>
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setStatusFilter('all')
+                  }}
+                  className="text-sm text-[#667eea] hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {allTenants.map((tenant) => (
+              {filteredTenants.map((tenant) => (
                 <div
                   key={tenant.id}
                   className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e] hover:border-[#3a3a3c] transition-colors"
@@ -123,7 +206,7 @@ export function TenantsPage() {
                         </div>
                         <div className="flex items-center gap-2 text-[#98989d]">
                           <Calendar className="w-4 h-4" />
-                          <span>Lease ends {formatDate(tenant.lease_end)}</span>
+                          <span>Ends {formatDate(tenant.lease_end)}</span>
                         </div>
                         <div className="font-semibold text-white">
                           {formatCurrency(Number(tenant.rent_amount))}/mo

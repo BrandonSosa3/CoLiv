@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PropertiesPage } from './pages/PropertiesPage'
 import { PropertyDetailPage } from './pages/PropertyDetailPage'
 import { TenantsPage } from './pages/TenantsPage'
+import { PaymentsPage } from './pages/PaymentsPage'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="properties" element={<PropertiesPage />} />
             <Route path="properties/:id" element={<PropertyDetailPage />} />
             <Route path="tenants" element={<TenantsPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
           </Route>
         </Routes>
         <Toaster 

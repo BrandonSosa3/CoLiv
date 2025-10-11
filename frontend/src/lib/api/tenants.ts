@@ -7,6 +7,11 @@ export const tenantsApi = {
     return data
   },
 
+  getByRoom: async (roomId: string): Promise<TenantWithUser[]> => {
+    const { data } = await apiClient.get<TenantWithUser[]>(`/tenants/room/${roomId}`)
+    return data
+  },
+
   create: async (tenant: {
     user_id: string
     room_id: string

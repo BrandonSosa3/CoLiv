@@ -8,15 +8,17 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { CreateUnitModal } from '@/components/units/CreateUnitModal'
+import { EditPropertyModal } from '@/components/properties/EditPropertyModal'
 import { UnitCard } from '@/components/units/UnitCard'
 import { DeletePropertyDialog } from '@/components/properties/DeletePropertyDialog'
-import { ArrowLeft, Plus, MapPin, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, MapPin, Trash2, Edit2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 export function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showCreateUnit, setShowCreateUnit] = useState(false)
+  const [showEditProperty, setShowEditProperty] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const { data: property, isLoading: propertyLoading } = useQuery({
@@ -87,6 +89,13 @@ export function PropertyDetailPage() {
             </div>
           </div>
           <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowEditProperty(true)}
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
             <Button
               variant="danger"
               onClick={() => setShowDeleteDialog(true)}
@@ -178,6 +187,13 @@ export function PropertyDetailPage() {
         <CreateUnitModal
           propertyId={property.id}
           onClose={() => setShowCreateUnit(false)}
+        />
+      )}
+
+      {showEditProperty && (
+        <EditPropertyModal
+          property={property}
+          onClose={() => setShowEditProperty(false)}
         />
       )}
 
