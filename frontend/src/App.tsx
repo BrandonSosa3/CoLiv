@@ -8,6 +8,8 @@ import { PropertiesPage } from './pages/PropertiesPage'
 import { PropertyDetailPage } from './pages/PropertyDetailPage'
 import { TenantsPage } from './pages/TenantsPage'
 import { PaymentsPage } from './pages/PaymentsPage'
+import { MaintenancePage } from './pages/MaintenancePage'
+import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
@@ -35,6 +37,8 @@ function App() {
             <Route path="properties/:id" element={<PropertyDetailPage />} />
             <Route path="tenants" element={<TenantsPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            <Route path="maintenance" element={<MaintenancePage />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
           </Route>
         </Routes>
         <Toaster 
