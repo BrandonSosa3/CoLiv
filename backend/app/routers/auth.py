@@ -1,57 +1,76 @@
-from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from datetime import timedelta
 
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.models.operator import Operator
-from app.schemas.user import UserCreate, UserResponse, Token
-from app.utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
+from app.schemas.user import UserCreate, UserResponse
+from app.utils.auth import (
+    get_password_hash,
+    verify_password,
+    create_access_token,
+    get_current_user,
+)
 from app.config import get_settings
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
 settings = get_settings()
 
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user (operator only for MVP)"""
-    
-    # Check if email already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
+
+@router.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    """Register a new operator"""
+    # Check if user already exists
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
     # Create user
-    user = User(
-        email=user_data.email,
-        password_hash=get_password_hash(user_data.password),
-        role=user_data.role
+    hashed_password = get_password_hash(user.password)
+    db_user = User(
+        email=user.email,
+        password_hash=hashed_password,
+        role='operator'
     )
-    db.add(user)
+    db.add(db_user)
+    db.flush()
+    
+    # Create operator profile
+    operator = Operator(user_id=db_user.id)
+    db.add(operator)
+    
     db.commit()
-    db.refresh(user)
+    db.refresh(db_user)
     
-    # If operator, create operator profile
-    if user.role == UserRole.OPERATOR:
-        operator = Operator(user_id=user.id)
-        db.add(operator)
-        db.commit()
+    # Create access token with user ID (not email!)
+    access_token = create_access_token(
+        data={"sub": str(db_user.id)},  # Use user.id, not email
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
+    )
     
-    return user
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(db_user.id),
+            "email": db_user.email,
+            "role": db_user.role
+        }
+    }
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """Login and get access token"""
-    
+    """Login for operators and tenants"""
     # Find user by email
     user = db.query(User).filter(User.email == form_data.username).first()
     
@@ -62,33 +81,19 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Create access token
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    # Create access token with user ID (not email!)
     access_token = create_access_token(
-        data={"sub": user.email},
-        expires_delta=access_token_expires
+        data={"sub": str(user.id)},  # Use user.id, not email
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
-@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
-def delete_account(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Delete user account and all associated data
-    
-    This performs a CASCADE delete:
-    - User account
-    - Operator/Tenant profile
-    - All properties, units, rooms (if operator)
-    - All tenant assignments, payments (if tenant)
-    """
-    
-    # Delete the user (CASCADE will handle related records)
-    db.delete(current_user)
-    db.commit()
-    
-    return None
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: User = Depends(get_current_user)):
+    """Get current user info"""
+    return current_user

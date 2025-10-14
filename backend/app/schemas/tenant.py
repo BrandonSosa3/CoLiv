@@ -1,9 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from datetime import datetime, date
 from typing import Optional
 from decimal import Decimal
-
 from app.models.tenant import TenantStatus
 
 
@@ -18,7 +17,8 @@ class TenantBase(BaseModel):
 
 
 class TenantCreate(TenantBase):
-    user_id: UUID  # Reference to existing user account
+    email: EmailStr  # Accept email instead of user_id
+    password: Optional[str] = "TempPassword123!"  # Optional password
 
 
 class TenantUpdate(BaseModel):

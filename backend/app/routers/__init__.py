@@ -7,5 +7,4 @@ import app.routers.payments as payments
 import app.routers.dashboard as dashboard
 import app.routers.maintenance as maintenance
 import app.routers.announcements as announcements
-
-__all__ = ["auth", "properties", "units", "rooms", "tenants", "payments", "dashboard", "maintenance", "announcements"]
+import app.routers.tenant_portal as tenant_portal
