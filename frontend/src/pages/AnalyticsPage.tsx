@@ -11,12 +11,15 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts'
-import { TrendingUp, DollarSign, Users, Download } from 'lucide-react'
+import { TrendingUp, DollarSign, Users, Download, Percent } from 'lucide-react'
 
 interface MonthData {
   month: string
   revenue: number
   count: number
+  paid: number
+  pending: number
+  overdue: number
 }
 
 export function AnalyticsPage() {
@@ -73,6 +76,10 @@ export function AnalyticsPage() {
     ?.filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + Number(p.amount), 0) || 0
 
+  // Calculate average revenue per room
+  const totalRooms = metrics?.total_rooms || 1
+  const avgRevenuePerRoom = totalRevenue / totalRooms
+
   // Calculate occupancy rate
   const occupancyRate = metrics?.occupied_rooms && metrics?.total_rooms
     ? ((metrics.occupied_rooms / metrics.total_rooms) * 100).toFixed(1)
@@ -82,7 +89,7 @@ export function AnalyticsPage() {
     if (!filteredPayments) return
 
     const csv = [
-      ['Date', 'Property', 'Tenant', 'Unit', 'Room', 'Amount', 'Status', 'Payment Method'],
+      ['Date', 'Property', 'Tenant', 'Unit', 'Room', 'Amount', 'Status', 'Payment Method', 'Due Date', 'Paid Date'],
       ...filteredPayments.map(p => [
         new Date(p.due_date).toLocaleDateString(),
         p.property_name,
@@ -91,7 +98,9 @@ export function AnalyticsPage() {
         p.room_number,
         p.amount,
         p.status,
-        p.payment_method || 'N/A'
+        p.payment_method || 'N/A',
+        p.due_date,
+        p.paid_date || 'N/A'
       ])
     ].map(row => row.join(',')).join('\n')
 
@@ -99,7 +108,7 @@ export function AnalyticsPage() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `payments-analytics-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
   }
 
@@ -107,7 +116,7 @@ export function AnalyticsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Analytics</h1>
+          <h1 className="text-3xl font-bold text-white">Analytics & Reports</h1>
           <p className="text-[#98989d] mt-2">
             Revenue trends, occupancy metrics, and insights
           </p>
@@ -161,7 +170,7 @@ export function AnalyticsPage() {
         <Card>
           <CardContent>
             <div className="flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-[#667eea]" />
+              <Percent className="w-8 h-8 text-[#667eea]" />
               <div>
                 <p className="text-sm text-[#636366]">Collection Rate</p>
                 <p className="text-2xl font-bold text-white">{collectionRate}%</p>
@@ -175,9 +184,9 @@ export function AnalyticsPage() {
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-[#ff9f0a]" />
               <div>
-                <p className="text-sm text-[#636366]">Occupied Rooms</p>
+                <p className="text-sm text-[#636366]">Occupancy Rate</p>
                 <p className="text-2xl font-bold text-white">
-                  {metrics?.occupied_rooms || 0}
+                  {occupancyRate}%
                 </p>
               </div>
             </div>
@@ -189,9 +198,9 @@ export function AnalyticsPage() {
             <div className="flex items-center gap-3">
               <TrendingUp className="w-8 h-8 text-[#ffd60a]" />
               <div>
-                <p className="text-sm text-[#636366]">Occupancy Rate</p>
+                <p className="text-sm text-[#636366]">Avg per Room</p>
                 <p className="text-2xl font-bold text-white">
-                  {occupancyRate}%
+                  ${avgRevenuePerRoom.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -279,10 +288,10 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Monthly Payments Bar Chart */}
+        {/* Monthly Payment Count */}
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-white">Monthly Payments</h2>
+            <h2 className="text-xl font-semibold text-white">Monthly Payment Volume</h2>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -312,6 +321,43 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Status Breakdown by Month */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-semibold text-white">Payment Status by Month</h2>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={revenueByMonth}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2e" />
+              <XAxis 
+                dataKey="month" 
+                stroke="#98989d"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis 
+                stroke="#98989d"
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#1c1c1e',
+                  border: '1px solid #2c2c2e',
+                  borderRadius: '8px',
+                  color: '#ffffff'
+                }}
+              />
+              <Legend 
+                wrapperStyle={{ color: '#98989d' }}
+              />
+              <Bar dataKey="paid" stackId="a" fill="#32d74b" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="pending" stackId="a" fill="#ffd60a" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="overdue" stackId="a" fill="#ff453a" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -328,6 +374,9 @@ function calculateRevenueByMonth(payments: any[], timeRange: string): MonthData[
       month: date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
       revenue: 0,
       count: 0,
+      paid: 0,
+      pending: 0,
+      overdue: 0,
     })
   }
 
@@ -338,8 +387,14 @@ function calculateRevenueByMonth(payments: any[], timeRange: string): MonthData[
     const monthData = months.find(m => m.month === monthKey)
     if (monthData) {
       monthData.count++
+      
       if (payment.status === 'paid') {
         monthData.revenue += Number(payment.amount)
+        monthData.paid++
+      } else if (payment.status === 'pending') {
+        monthData.pending++
+      } else if (payment.status === 'overdue') {
+        monthData.overdue++
       }
     }
   })

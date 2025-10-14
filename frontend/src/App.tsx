@@ -10,17 +10,25 @@ import { TenantsPage } from './pages/TenantsPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { MaintenancePage } from './pages/MaintenancePage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           
@@ -39,6 +47,7 @@ function App() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
           </Route>
         </Routes>
         <Toaster 

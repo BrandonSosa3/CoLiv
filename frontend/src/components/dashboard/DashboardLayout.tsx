@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Building2, Users, DollarSign, Wrench, Megaphone, LogOut, Home } from 'lucide-react'
+import { Building2, Users, DollarSign, Wrench, Megaphone,TrendingUp, LogOut, Home } from 'lucide-react'
 
 export function DashboardLayout() {
   const navigate = useNavigate()
@@ -17,6 +17,8 @@ export function DashboardLayout() {
     { path: '/dashboard/payments', icon: DollarSign, label: 'Payments' },
     { path: '/dashboard/maintenance', icon: Wrench, label: 'Maintenance' },
     { path: '/dashboard/announcements', icon: Megaphone, label: 'Announcements' },
+    { path: '/dashboard/analytics', icon: TrendingUp, label: 'Analytics' },
+
   ]
 
   return (
