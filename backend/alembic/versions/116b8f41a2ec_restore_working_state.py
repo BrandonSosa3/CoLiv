@@ -1,8 +1,8 @@
-"""Initial schema with room-level tracking
+"""restore_working_state
 
-Revision ID: a435adcf73c1
+Revision ID: 116b8f41a2ec
 Revises: 
-Create Date: 2025-10-03 20:02:54.138116
+Create Date: 2025-10-14 12:24:14.634983
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'a435adcf73c1'
+revision: str = '116b8f41a2ec'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
