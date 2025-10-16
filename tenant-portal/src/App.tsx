@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { MaintenancePage } from './pages/MaintenancePage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { PreferencesPage } from './pages/PreferencesPage'
 import { TenantLayout } from './components/TenantLayout'
 
 const queryClient = new QueryClient()
@@ -36,6 +37,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/maintenance" element={<MaintenancePage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
+            <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Routes>

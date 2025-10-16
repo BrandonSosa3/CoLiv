@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -15,7 +14,7 @@ interface AssignTenantModalProps {
 
 interface FormData {
   email: string
-  password: string
+  password?: string
   lease_start: string
   lease_end: string
   deposit_paid?: number

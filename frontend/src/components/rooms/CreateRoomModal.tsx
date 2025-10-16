@@ -10,20 +10,24 @@ interface CreateRoomModalProps {
   onClose: () => void
 }
 
-interface FormData {
+type RoomStatus = "vacant" | "occupied" | "maintenance"
+
+interface RoomFormData {
   room_number: string
   rent_amount: number
   size_sqft?: number
-  has_private_bath: boolean
-  status: string
+  has_private_bath?: boolean
+  status?: RoomStatus
+  room_type?: 'private' | 'shared'
 }
 
 export function CreateRoomModal({ unitId, onClose }: CreateRoomModalProps) {
   const queryClient = useQueryClient()
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<RoomFormData>({
     defaultValues: {
       has_private_bath: false,
-      status: 'vacant',  // Default to vacant
+      status: "vacant",
+      room_type: "private",
     },
   })
 
@@ -39,14 +43,15 @@ export function CreateRoomModal({ unitId, onClose }: CreateRoomModalProps) {
     },
   })
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: RoomFormData) => {
     createMutation.mutate({
       unit_id: unitId,
       room_number: data.room_number,
       rent_amount: data.rent_amount,
       size_sqft: data.size_sqft,
-      has_private_bath: data.has_private_bath,
-      status: 'vacant',  // Always create as vacant
+      has_private_bath: data.has_private_bath ?? false,
+      status: "vacant", // Matches backend enum
+      room_type: data.room_type ?? "private",
     })
   }
 

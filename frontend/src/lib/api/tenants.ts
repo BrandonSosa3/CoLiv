@@ -13,7 +13,8 @@ export const tenantsApi = {
   },
 
   create: async (tenant: {
-    user_id: string
+    email: string
+    password?: string
     room_id: string
     lease_start: string
     lease_end: string

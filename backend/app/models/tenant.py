@@ -16,7 +16,7 @@ class Tenant(BaseModel):
     __tablename__ = "tenants"
     
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False)
-    room_id = Column(UUID(as_uuid=True), ForeignKey("rooms.id"), nullable=False)  # Assigned to ROOM
+    room_id = Column(UUID(as_uuid=True), ForeignKey("rooms.id"), nullable=False)
     lease_start = Column(Date, nullable=False)
     lease_end = Column(Date, nullable=False)
     rent_amount = Column(Numeric(10, 2), nullable=False)
@@ -28,3 +28,4 @@ class Tenant(BaseModel):
     user = relationship("User", back_populates="tenant")
     room = relationship("Room", foreign_keys=[room_id])
     payments = relationship("Payment", back_populates="tenant", cascade="all, delete-orphan")
+    preference = relationship("TenantPreference", back_populates="tenant", uselist=False, cascade="all, delete-orphan")

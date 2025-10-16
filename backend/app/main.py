@@ -13,6 +13,7 @@ from app.routers import (
     announcements,
     tenant_portal,
     tenant_profile,
+    preferences,
 )
 
 app = FastAPI(title="CoLiv OS API", version="1.0.0")
@@ -38,6 +39,7 @@ app.include_router(maintenance.router, prefix="/api/v1")
 app.include_router(announcements.router, prefix="/api/v1")
 app.include_router(tenant_portal.router, prefix="/api/v1")
 app.include_router(tenant_profile.router, prefix="/api/v1")
+app.include_router(preferences.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
