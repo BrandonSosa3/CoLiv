@@ -6,8 +6,8 @@ import logging
 
 from app.database import get_db
 from app.models.user import User
-from app.models.tenant import Tenant
-from app.models.room import Room
+from app.models.tenant import Tenant, TenantStatus
+from app.models.room import Room, RoomStatus
 from app.models.unit import Unit
 from app.models.property import Property
 from app.models.payment import Payment
@@ -280,12 +280,14 @@ def update_tenant(
 
 
 @router.delete("/{tenant_id}")
+
+@router.delete("/{tenant_id}")
 def delete_tenant(
     tenant_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Remove a tenant and mark room as vacant"""
+    """Mark tenant as moved out (preserves all historical data)"""
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     
     if not tenant:
@@ -305,14 +307,15 @@ def delete_tenant(
             detail="Not authorized"
         )
     
-    # Mark room as vacant
-    room.status = "vacant"
+    # Mark room as available
+    room.status = RoomStatus.VACANT
     
-    # Delete associated payments
-    db.query(Payment).filter(Payment.tenant_id == tenant_id).delete()
+    # Mark tenant as moved out (DON'T DELETE - preserve history!)
+    tenant.status = TenantStatus.MOVED_OUT
     
-    # Delete tenant
-    db.delete(tenant)
+    # Keep all payment records intact for accounting/legal purposes
+    
     db.commit()
     
+    return {"message": "Tenant marked as moved out successfully"}
     return {"message": "Tenant removed successfully"}

@@ -20,6 +20,7 @@ export function TenantsPage() {
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const [showPreferencesModal, setShowPreferencesModal] = useState(false)
   const [showMatchesModal, setShowMatchesModal] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'moved_out'>('all')
 
   // Get all properties for the dropdown
   const { data: properties } = useQuery({
@@ -32,11 +33,16 @@ export function TenantsPage() {
     setSelectedPropertyId(properties[0].id)
   }
 
-  const { data: tenants, isLoading } = useQuery({
+  const { data: allTenants, isLoading } = useQuery({
     queryKey: ['tenants', selectedPropertyId],
     queryFn: () => tenantsApi.getByProperty(selectedPropertyId),
     enabled: !!selectedPropertyId,
   })
+
+  // Filter tenants by status
+  const tenants = allTenants?.filter(tenant => 
+    statusFilter === 'all' ? true : tenant.status === statusFilter
+  )
 
   if (isLoading) {
     return <LoadingScreen message="Loading tenants..." />
@@ -63,13 +69,16 @@ export function TenantsPage() {
     moved_out: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
   }
 
+  const activeTenantCount = allTenants?.filter(t => t.status === 'active').length || 0
+  const movedOutCount = allTenants?.filter(t => t.status === 'moved_out').length || 0
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Tenants</h1>
           <p className="text-[#98989d] mt-2">
-            {tenants?.length || 0} total tenant{tenants?.length !== 1 ? 's' : ''}
+            {activeTenantCount} active · {movedOutCount} moved out
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -93,6 +102,50 @@ export function TenantsPage() {
         </div>
       </div>
 
+      {/* Status Filter */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+            statusFilter === 'all'
+              ? 'bg-[#667eea] text-white'
+              : 'bg-[#1c1c1e] text-[#98989d] hover:bg-[#2c2c2e]'
+          }`}
+        >
+          All ({allTenants?.length || 0})
+        </button>
+        <button
+          onClick={() => setStatusFilter('active')}
+          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+            statusFilter === 'active'
+              ? 'bg-[#32d74b] text-white'
+              : 'bg-[#1c1c1e] text-[#98989d] hover:bg-[#2c2c2e]'
+          }`}
+        >
+          Active ({activeTenantCount})
+        </button>
+        <button
+          onClick={() => setStatusFilter('pending')}
+          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+            statusFilter === 'pending'
+              ? 'bg-[#ffd60a] text-black'
+              : 'bg-[#1c1c1e] text-[#98989d] hover:bg-[#2c2c2e]'
+          }`}
+        >
+          Pending ({allTenants?.filter(t => t.status === 'pending').length || 0})
+        </button>
+        <button
+          onClick={() => setStatusFilter('moved_out')}
+          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+            statusFilter === 'moved_out'
+              ? 'bg-[#636366] text-white'
+              : 'bg-[#1c1c1e] text-[#98989d] hover:bg-[#2c2c2e]'
+          }`}
+        >
+          Moved Out ({movedOutCount})
+        </button>
+      </div>
+
       {!selectedPropertyId ? (
         <Card>
           <CardContent className="text-center py-12">
@@ -105,12 +158,13 @@ export function TenantsPage() {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-[#98989d] mb-4">
-              No tenants yet. Add your first tenant to get started.
+              No tenants found with this status.
             </p>
-            <Button onClick={() => setShowCreateModal(true)}>
-              <User className="w-4 h-4 mr-2" />
-              Add First Tenant
-            </Button>
+            {statusFilter !== 'all' && (
+              <Button variant="secondary" onClick={() => setStatusFilter('all')}>
+                View All Tenants
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -131,7 +185,7 @@ export function TenantsPage() {
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-xs border ${statusColors[tenant.status]}`}>
-                    {tenant.status}
+                    {tenant.status === 'moved_out' ? 'Moved Out' : tenant.status}
                   </span>
                 </div>
 
@@ -158,33 +212,41 @@ export function TenantsPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={() => handleSetPreferences(tenant)}
-                  >
-                    <Sparkles className="w-4 h-4 mr-1" />
-                    Preferences
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={() => handleViewMatches(tenant)}
-                  >
-                    <Users className="w-4 h-4 mr-1" />
-                    Matches
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleRemoveTenant(tenant)}
-                  >
-                    <UserX className="w-4 h-4" />
-                  </Button>
-                </div>
+                {tenant.status === 'active' ? (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => handleSetPreferences(tenant)}
+                    >
+                      <Sparkles className="w-4 h-4 mr-1" />
+                      Preferences
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => handleViewMatches(tenant)}
+                    >
+                      <Users className="w-4 h-4 mr-1" />
+                      Matches
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleRemoveTenant(tenant)}
+                    >
+                      <UserX className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-[#2c2c2e]">
+                    <p className="text-xs text-[#636366] text-center">
+                      {tenant.status === 'moved_out' ? 'Historical Record' : 'Awaiting Move-in'}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

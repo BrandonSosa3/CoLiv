@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.property import Property
 from app.models.unit import Unit
 from app.models.room import Room
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantStatus
 from app.models.payment import Payment
 from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 from app.utils.auth import get_current_operator
@@ -119,20 +119,16 @@ def delete_property(
         room_ids = [room.id for room in rooms]
         
         if room_ids:
-            # Check for any tenants (active or not)
-            tenant_count = db.query(Tenant).filter(Tenant.room_id.in_(room_ids)).count()
-            if tenant_count > 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Cannot delete property with {tenant_count} tenant(s). Please remove all tenants first."
-                )
+            # Check for active or pending tenants (moved_out tenants are OK)
+            active_tenant_count = db.query(Tenant).filter(
+                Tenant.room_id.in_(room_ids),
+                Tenant.status.in_([TenantStatus.ACTIVE, TenantStatus.PENDING])
+            ).count()
             
-            # Check for any payments
-            payment_count = db.query(Payment).filter(Payment.room_id.in_(room_ids)).count()
-            if payment_count > 0:
+            if active_tenant_count > 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Cannot delete property with {payment_count} payment record(s). Payment history must be preserved."
+                    detail=f"Cannot delete property with {active_tenant_count} active/pending tenant(s). Please mark them as moved out first."
                 )
     
     # Safe to delete - cascade will handle units and rooms
