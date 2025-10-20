@@ -8,4 +8,5 @@ import app.routers.dashboard as dashboard
 import app.routers.maintenance as maintenance
 import app.routers.announcements as announcements
 import app.routers.tenant_portal as tenant_portal
+import app.routers.tenant_profile as tenant_profile
 import app.routers.preferences as preferences

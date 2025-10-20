@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 
 from app.routers import (
     auth,
-    operators,
     properties,
     units,
     rooms,
