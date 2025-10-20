@@ -67,7 +67,6 @@ def health_check():
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
-app.include_router(operators.router, prefix="/api/v1")
 app.include_router(properties.router, prefix="/api/v1")
 app.include_router(units.router, prefix="/api/v1")
 app.include_router(rooms.router, prefix="/api/v1")
