@@ -38,6 +38,7 @@ def get_current_tenant(
 
 
 @router.get("/")
+@router.get("/profile")
 def get_my_profile(
     tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
@@ -186,3 +187,4 @@ def get_my_announcements(
         }
         for announcement in announcements
     ]
+

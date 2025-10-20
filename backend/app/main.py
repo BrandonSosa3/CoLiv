@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from app.routers import (
     auth,
+    dashboard,
     properties,
     units,
     rooms,
@@ -13,6 +14,7 @@ from app.routers import (
     maintenance,
     announcements,
     preferences,
+    tenant_portal,
 )
 
 # Load environment variables
@@ -67,6 +69,7 @@ def health_check():
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(properties.router, prefix="/api/v1")
 app.include_router(units.router, prefix="/api/v1")
 app.include_router(rooms.router, prefix="/api/v1")
@@ -75,3 +78,4 @@ app.include_router(payments.router, prefix="/api/v1")
 app.include_router(maintenance.router, prefix="/api/v1")
 app.include_router(announcements.router, prefix="/api/v1")
 app.include_router(preferences.router, prefix="/api/v1")
+app.include_router(tenant_portal.router, prefix="/api/v1")
