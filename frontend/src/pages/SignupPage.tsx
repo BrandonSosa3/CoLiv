@@ -47,11 +47,11 @@ export function SignupPage() {
       })
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create account')
-    } finally {
+    } finally { 
       setIsLoading(false)
     }
   }
-
+ 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
       {/* Background gradient */}
