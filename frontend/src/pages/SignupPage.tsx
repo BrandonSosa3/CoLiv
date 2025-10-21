@@ -1,36 +1,33 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { authApi } from '@/lib/api/auth'
+import { Building2 } from 'lucide-react'
 
-const signupSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
-  companyName: z.string().min(2, 'Company name is required'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
-
-type SignupForm = z.infer<typeof signupSchema>
+interface SignupForm {
+  companyName: string
+  email: string
+  password: string
+  confirmPassword: string
+}
 
 export function SignupPage() {
   const navigate = useNavigate()
-  const [error, setError] = useState<string>('')
+  const location = useLocation()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<SignupForm>({
-    resolver: zodResolver(signupSchema),
-  })
+  } = useForm<SignupForm>()
+
+  const password = watch('password')
 
   const onSubmit = async (data: SignupForm) => {
     try {
@@ -40,6 +37,7 @@ export function SignupPage() {
       await authApi.signup({
         email: data.email,
         password: data.password,
+        company_name: data.companyName, // ← Fixed: send company_name
         role: 'operator',
       })
       
@@ -63,86 +61,99 @@ export function SignupPage() {
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
-            CoLiv OS
-          </h1>
-          <p className="text-[#98989d] mt-2">
-            Start managing your co-living properties
-          </p>
-        </div>
-
-        {/* Signup Card */}
-        <div className="bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
-          <h2 className="text-2xl font-semibold text-white mb-6">
-            Create your account
-          </h2>
-
-          {error && (
-            <div className="mb-6 p-4 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
-              <p className="text-sm text-[#ff453a]">{error}</p>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-center mb-6">
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-[#667eea] to-[#764ba2]">
+                <Building2 className="w-8 h-8 text-white" />
+              </div>
             </div>
-          )}
+            <h1 className="text-2xl font-bold text-center text-white mb-2">
+              Create Your Account
+            </h1>
+            <p className="text-center text-[#98989d]">
+              Start managing your co-living properties
+            </p>
+          </CardHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="Company Name"
-              placeholder="Downtown Co-Living"
-              error={errors.companyName?.message}
-              {...register('companyName')}
-            />
+          <CardContent>
+            {location.state?.message && (
+              <div className="mb-4 p-3 rounded-lg bg-[#32d74b]/10 border border-[#32d74b]/20">
+                <p className="text-[#32d74b] text-sm text-center">
+                  {location.state.message}
+                </p>
+              </div>
+            )}
 
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@company.com"
-              error={errors.email?.message}
-              {...register('email')}
-            />
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
+                <p className="text-[#ff453a] text-sm">{error}</p>
+              </div>
+            )}
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <Input
+                label="Company Name"
+                placeholder="Downtown Co-Living"
+                error={errors.companyName?.message}
+                {...register('companyName', {
+                  required: 'Company name is required',
+                })}
+              />
 
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="••••••••"
-              error={errors.confirmPassword?.message}
-              {...register('confirmPassword')}
-            />
+              <Input
+                label="Email"
+                type="email"
+                placeholder="you@company.com"
+                error={errors.email?.message}
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
+                })}
+              />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating account...' : 'Create account'}
-            </Button>
-          </form>
+              <Input
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 6,
+                    message: 'Password must be at least 6 characters',
+                  },
+                })}
+              />
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-[#98989d]">
+              <Input
+                label="Confirm Password"
+                type="password"
+                placeholder="••••••••"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword', {
+                  required: 'Please confirm your password',
+                  validate: (value) =>
+                    value === password || 'Passwords do not match',
+                })}
+              />
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Sign Up'}
+              </Button>
+            </form>
+
+            <p className="text-center text-[#636366] text-sm mt-6">
               Already have an account?{' '}
-              <Link
-                to="/login"
-                className="text-[#667eea] hover:text-[#764ba2] font-medium"
-              >
+              <Link to="/login" className="text-[#667eea] hover:underline">
                 Sign in
               </Link>
             </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-sm text-[#636366] mt-8">
-          By signing up, you agree to our Terms of Service and Privacy Policy
-        </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
