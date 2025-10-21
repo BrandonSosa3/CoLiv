@@ -12,12 +12,12 @@ export interface TenantProfile {
 
 export const profileApi = {
   getProfile: async (): Promise<TenantProfile> => {
-    const { data } = await apiClient.get('/tenants/me/profile/')
+    const { data } = await apiClient.get('/tenants/me/profile')
     return data
   },
 
   updateProfile: async (email: string) => {
-    const { data } = await apiClient.put('/tenants/me/profile/', { email })
+    const { data } = await apiClient.put('/tenants/me/profile', { email })
     return data
   },
 
