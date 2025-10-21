@@ -9,6 +9,7 @@ from app.models.property import Property
 from app.models.unit import Unit
 from app.models.room import Room
 from app.schemas.room import RoomCreate, RoomUpdate, RoomResponse
+from app.models.tenant import Tenant, TenantStatus
 from app.utils.auth import get_current_operator
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
@@ -162,13 +163,13 @@ def update_room(
     return room
 
 
-@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{room_id}")
 def delete_room(
     room_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Delete a room"""
+    """Delete a room and mark any tenants as moved out"""
     
     room = db.query(Room).filter(Room.id == room_id).first()
     
@@ -191,6 +192,13 @@ def delete_room(
             detail="You don't have access to this room"
         )
     
+    # Mark any tenants in this room as moved out (don't delete them)
+    tenants_in_room = db.query(Tenant).filter(Tenant.room_id == room_id).all()
+    for tenant in tenants_in_room:
+        tenant.status = TenantStatus.MOVED_OUT
+        tenant.room_id = None
+    
+    # Now safe to delete the room
     db.delete(room)
     db.commit()
     

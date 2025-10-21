@@ -60,21 +60,32 @@ def get_my_lease(
     db: Session = Depends(get_db)
 ):
     """Get current tenant's lease information"""
+    
+    if not tenant.room_id:
+        # Tenant has no room (moved out)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active lease found. You may have moved out."
+        )
+    
     room = db.query(Room).filter(Room.id == tenant.room_id).first()
+    if not room:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Room not found"
+        )
+        
     unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
     property = db.query(Property).filter(Property.id == unit.property_id).first()
     
     return {
         "property_name": property.name,
-        "property_address": f"{property.address}, {property.city}, {property.state}",
         "unit_number": unit.unit_number,
         "room_number": room.room_number,
-        "rent_amount": str(tenant.rent_amount),
-        "lease_start": tenant.lease_start.isoformat(),
-        "lease_end": tenant.lease_end.isoformat(),
-        "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
-        "deposit_paid": str(tenant.deposit_paid) if tenant.deposit_paid else None,
-        "status": tenant.status,
+        "lease_start": tenant.lease_start,
+        "lease_end": tenant.lease_end,
+        "rent_amount": tenant.rent_amount,
+        "status": tenant.status
     }
 
 
