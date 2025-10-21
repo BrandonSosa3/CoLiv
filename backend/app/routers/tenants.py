@@ -52,6 +52,48 @@ def create_tenant(
         # User exists, check if they're already a tenant
         if existing_user.role == 'tenant':
             user_id = existing_user.id
+            
+            # Check for existing tenant record
+            existing_tenant = db.query(Tenant).filter(Tenant.user_id == user_id).first()
+            
+            if existing_tenant:
+                if existing_tenant.status == TenantStatus.ACTIVE:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="This tenant is already active in another room"
+                    )
+                elif existing_tenant.status == TenantStatus.MOVED_OUT:
+                    # Reactivate the moved out tenant
+                    existing_tenant.room_id = tenant.room_id
+                    existing_tenant.lease_start = tenant.lease_start
+                    existing_tenant.lease_end = tenant.lease_end
+                    existing_tenant.rent_amount = tenant.rent_amount
+                    existing_tenant.deposit_paid = tenant.deposit_paid
+                    existing_tenant.status = TenantStatus.ACTIVE
+                    
+                    db_tenant = existing_tenant
+                else:
+                    # Handle other statuses (pending, etc.)
+                    existing_tenant.room_id = tenant.room_id
+                    existing_tenant.lease_start = tenant.lease_start
+                    existing_tenant.lease_end = tenant.lease_end
+                    existing_tenant.rent_amount = tenant.rent_amount
+                    existing_tenant.deposit_paid = tenant.deposit_paid
+                    existing_tenant.status = TenantStatus.ACTIVE
+                    
+                    db_tenant = existing_tenant
+            else:
+                # User exists but no tenant record - create new tenant
+                db_tenant = Tenant(
+                    user_id=user_id,
+                    room_id=tenant.room_id,
+                    lease_start=tenant.lease_start,
+                    lease_end=tenant.lease_end,
+                    rent_amount=tenant.rent_amount,
+                    deposit_paid=tenant.deposit_paid,
+                    status=TenantStatus.ACTIVE
+                )
+                db.add(db_tenant)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -67,18 +109,18 @@ def create_tenant(
         db.add(new_user)
         db.flush()
         user_id = new_user.id
-    
-    # Create tenant
-    db_tenant = Tenant(
-        user_id=user_id,
-        room_id=tenant.room_id,
-        lease_start=tenant.lease_start,
-        lease_end=tenant.lease_end,
-        rent_amount=tenant.rent_amount,
-        deposit_paid=tenant.deposit_paid,
-        status='active'
-    )
-    db.add(db_tenant)
+        
+        # Create new tenant
+        db_tenant = Tenant(
+            user_id=user_id,
+            room_id=tenant.room_id,
+            lease_start=tenant.lease_start,
+            lease_end=tenant.lease_end,
+            rent_amount=tenant.rent_amount,
+            deposit_paid=tenant.deposit_paid,
+            status=TenantStatus.ACTIVE
+        )
+        db.add(db_tenant)
     
     # Update room status to occupied
     room.status = "occupied"

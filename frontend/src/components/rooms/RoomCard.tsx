@@ -3,8 +3,9 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EditRoomModal } from '@/components/rooms/EditRoomModal'
 import { DeleteRoomDialog } from '@/components/rooms/DeleteRoomDialog'
+import { CreateTenantModal } from '@/components/tenants/CreateTenantModal'
 import { Room } from '@/types'
-import { Bed, Edit2, Trash2 } from 'lucide-react'
+import { Bed, Edit2, Trash2, UserPlus } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface RoomCardProps {
@@ -16,6 +17,7 @@ interface RoomCardProps {
 export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
   const [showEditRoom, setShowEditRoom] = useState(false)
   const [showDeleteRoom, setShowDeleteRoom] = useState(false)
+  const [showAddTenant, setShowAddTenant] = useState(false)
 
   const statusColors = {
     vacant: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
@@ -38,6 +40,16 @@ export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
               </div>
             </div>
             <div className="flex gap-1">
+              {room.status === 'vacant' && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowAddTenant(true)}
+                  className="bg-[#32d74b]/10 hover:bg-[#32d74b]/20 text-[#32d74b] border-[#32d74b]/20"
+                >
+                  <UserPlus className="w-3 h-3" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"
@@ -79,6 +91,19 @@ export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
               <span className="text-white">{room.has_private_bath ? 'Yes' : 'No'}</span>
             </div>
           </div>
+
+          {room.status === 'vacant' && (
+            <div className="mt-4 pt-4 border-t border-[#2c2c2e]">
+              <Button
+                size="sm"
+                onClick={() => setShowAddTenant(true)}
+                className="w-full"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Tenant
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -96,6 +121,14 @@ export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
           unitId={unitId}
           propertyId={propertyId}
           onClose={() => setShowDeleteRoom(false)}
+        />
+      )}
+
+      {showAddTenant && (
+        <CreateTenantModal
+          preSelectedRoomId={room.id}
+          preSelectedPropertyId={propertyId}
+          onClose={() => setShowAddTenant(false)}
         />
       )}
     </>

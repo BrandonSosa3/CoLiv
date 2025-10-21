@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -13,6 +13,8 @@ import { Room, Unit } from '@/types'
 
 interface CreateTenantModalProps {
   onClose: () => void
+  preSelectedRoomId?: string
+  preSelectedPropertyId?: string
 }
 
 interface FormData {
@@ -26,12 +28,12 @@ interface FormData {
   rent_amount: string
 }
 
-export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
+export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPropertyId }: CreateTenantModalProps) {
   const queryClient = useQueryClient()
-  const [selectedPropertyId, setSelectedPropertyId] = useState('')
+  const [selectedPropertyId, setSelectedPropertyId] = useState(preSelectedPropertyId || '')
   const [selectedUnitId, setSelectedUnitId] = useState('')
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>()
 
   // Get all properties
   const { data: properties } = useQuery({
@@ -53,10 +55,42 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
     enabled: !!selectedUnitId,
   })
 
+  // Auto-select first property if available and no preselection
+  useEffect(() => {
+    if (properties && properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId(properties[0].id)
+      setValue('property_id', properties[0].id)
+    }
+  }, [properties, selectedPropertyId, setValue])
+
+  // Handle preselected room
+  useEffect(() => {
+    if (preSelectedRoomId && units) {
+      // Find which unit contains the preselected room
+      const unitWithRoom = units.find(unit => {
+        // We'll need to check rooms for this unit
+        // This will be handled when rooms data is available
+      })
+    }
+  }, [preSelectedRoomId, units])
+
+  // Set preselected room when rooms data is available
+  useEffect(() => {
+    if (preSelectedRoomId && rooms) {
+      const preSelectedRoom = rooms.find(room => room.id === preSelectedRoomId)
+      if (preSelectedRoom) {
+        setValue('room_id', preSelectedRoomId)
+        // Auto-fill rent amount from room
+        setValue('rent_amount', preSelectedRoom.rent_amount.toString())
+      }
+    }
+  }, [preSelectedRoomId, rooms, setValue])
+
   const createMutation = useMutation({
     mutationFn: tenantsApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] })
+      queryClient.invalidateQueries({ queryKey: ['units-with-rooms'] })
       toast.success('Tenant created successfully')
       onClose()
     },
@@ -93,6 +127,24 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
     return units?.find((u: Unit) => u.id === unitId)?.unit_number || ''
   }
 
+  // Find unit for preselected room
+  useEffect(() => {
+    if (preSelectedRoomId && properties && units) {
+      // Find the unit that contains this room
+      const findUnitForRoom = async () => {
+        for (const unit of units) {
+          const unitRooms = await roomsApi.getByUnit(unit.id)
+          if (unitRooms.find(room => room.id === preSelectedRoomId)) {
+            setSelectedUnitId(unit.id)
+            setValue('unit_id', unit.id)
+            break
+          }
+        }
+      }
+      findUnitForRoom()
+    }
+  }, [preSelectedRoomId, units, setValue])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -102,7 +154,9 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
               <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
                 <User className="w-5 h-5 text-[#667eea]" />
               </div>
-              <h2 className="text-xl font-semibold text-white">Add New Tenant</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {preSelectedRoomId ? 'Add Tenant to Room' : 'Add New Tenant'}
+              </h2>
             </div>
             <button
               onClick={onClose}
@@ -158,7 +212,9 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
               <select
                 {...register('property_id', { required: 'Property is required' })}
                 onChange={(e) => handlePropertyChange(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                value={selectedPropertyId}
+                disabled={!!preSelectedPropertyId}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] disabled:opacity-50"
               >
                 <option value="">Select a property</option>
                 {properties?.map((property) => (
@@ -181,7 +237,9 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
                 <select
                   {...register('unit_id', { required: 'Unit is required' })}
                   onChange={(e) => handleUnitChange(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                  value={selectedUnitId}
+                  disabled={!!preSelectedRoomId}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] disabled:opacity-50"
                 >
                   <option value="">Select a unit</option>
                   {units?.map((unit: Unit) => (
@@ -204,7 +262,8 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
                 </label>
                 <select
                   {...register('room_id', { required: 'Room is required' })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                  disabled={!!preSelectedRoomId}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] disabled:opacity-50"
                 >
                   <option value="">Select a room</option>
                   {availableRooms?.map((room: Room) => (
@@ -216,7 +275,7 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
                 {errors.room_id && (
                   <p className="text-[#ff453a] text-sm mt-1">{errors.room_id.message}</p>
                 )}
-                {availableRooms?.length === 0 && (
+                {availableRooms?.length === 0 && !preSelectedRoomId && (
                   <p className="text-[#ff9f0a] text-sm mt-1">
                     No vacant rooms available in this unit
                   </p>
