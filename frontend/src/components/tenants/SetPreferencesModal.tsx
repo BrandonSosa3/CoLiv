@@ -41,7 +41,7 @@ export function SetPreferencesModal({
     retry: false,
   })
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, } = useForm<FormData>({
     defaultValues: existingPrefs || {
       cleanliness_importance: 3,
       noise_tolerance: 3,
