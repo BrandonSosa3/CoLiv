@@ -1,11 +1,15 @@
-import { useForm } from 'react-hook-form'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { tenantsApi } from '@/lib/api/tenants'
 import { propertiesApi } from '@/lib/api/properties'
+import { unitsApi } from '@/lib/api/units'
 import { roomsApi } from '@/lib/api/rooms'
+import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { X, UserPlus } from 'lucide-react'
+import { X, User } from 'lucide-react'
+import { Room, Unit } from '@/types'
 
 interface CreateTenantModalProps {
   onClose: () => void
@@ -15,36 +19,44 @@ interface FormData {
   email: string
   password: string
   property_id: string
+  unit_id: string
   room_id: string
   lease_start: string
   lease_end: string
-  rent_amount: number
-  deposit_paid: number
+  rent_amount: string
 }
 
 export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
   const queryClient = useQueryClient()
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>()
+  const [selectedPropertyId, setSelectedPropertyId] = useState('')
+  const [selectedUnitId, setSelectedUnitId] = useState('')
 
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>()
+
+  // Get all properties
   const { data: properties } = useQuery({
     queryKey: ['properties'],
     queryFn: propertiesApi.getAll,
   })
 
-  const selectedPropertyId = watch('property_id')
-
-  const { data: rooms } = useQuery({
-    queryKey: ['property-rooms', selectedPropertyId],
-    queryFn: () => roomsApi.getByProperty(selectedPropertyId),
+  // Get units for selected property
+  const { data: units } = useQuery({
+    queryKey: ['units', selectedPropertyId],
+    queryFn: () => unitsApi.getByProperty(selectedPropertyId),
     enabled: !!selectedPropertyId,
   })
 
-  const availableRooms = rooms?.filter(r => r.status === 'available')
+  // Get rooms for selected unit
+  const { data: rooms } = useQuery({
+    queryKey: ['rooms', selectedUnitId],
+    queryFn: () => roomsApi.getByUnit(selectedUnitId),
+    enabled: !!selectedUnitId,
+  })
 
   const createMutation = useMutation({
     mutationFn: tenantsApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-tenants'] })
+      queryClient.invalidateQueries({ queryKey: ['tenants'] })
       toast.success('Tenant created successfully')
       onClose()
     },
@@ -55,36 +67,55 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
 
   const onSubmit = (data: FormData) => {
     createMutation.mutate({
-      email: data.email,
-      password: data.password,
-      room_id: data.room_id,
-      lease_start: data.lease_start,
-      lease_end: data.lease_end,
-      rent_amount: data.rent_amount,
-      deposit_paid: data.deposit_paid || 0,
+      ...data,
+      rent_amount: parseFloat(data.rent_amount),
     })
+  }
+
+  const handlePropertyChange = (propertyId: string) => {
+    setSelectedPropertyId(propertyId)
+    setValue('property_id', propertyId)
+    setSelectedUnitId('')
+    setValue('unit_id', '')
+    setValue('room_id', '')
+  }
+
+  const handleUnitChange = (unitId: string) => {
+    setSelectedUnitId(unitId)
+    setValue('unit_id', unitId)
+    setValue('room_id', '')
+  }
+
+  const availableRooms = rooms?.filter((r: Room) => r.status === 'vacant')
+
+  // Helper to get unit number from unit_id
+  const getUnitNumber = (unitId: string) => {
+    return units?.find((u: Unit) => u.id === unitId)?.unit_number || ''
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-[#2c2c2e]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
-              <UserPlus className="w-5 h-5 text-[#667eea]" />
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
+                <User className="w-5 h-5 text-[#667eea]" />
+              </div>
+              <h2 className="text-xl font-semibold text-white">Add New Tenant</h2>
             </div>
-            <h2 className="text-xl font-semibold text-white">Add New Tenant</h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-[#2c2c2e] transition-colors"
+            >
+              <X className="w-5 h-5 text-[#98989d]" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-[#2c2c2e] transition-colors"
-          >
-            <X className="w-5 h-5 text-[#98989d]" />
-          </button>
-        </div>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">
                 Email *
@@ -92,96 +123,139 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
               <input
                 type="email"
                 {...register('email', { required: 'Email is required' })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                placeholder="tenant@example.com"
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-[#ff453a]">{errors.email.message}</p>
+                <p className="text-[#ff453a] text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">
                 Password *
               </label>
               <input
                 type="password"
-                {...register('password', { required: 'Password is required', minLength: 8 })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
+                {...register('password', { 
+                  required: 'Password is required',
+                  minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                })}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                placeholder="Enter password"
               />
               {errors.password && (
-                <p className="mt-1 text-xs text-[#ff453a]">
-                  {errors.password.type === 'minLength' ? 'Min 8 characters' : errors.password.message}
-                </p>
+                <p className="text-[#ff453a] text-sm mt-1">{errors.password.message}</p>
               )}
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#98989d] mb-2">
-              Property *
-            </label>
-            <select
-              {...register('property_id', { required: 'Property is required' })}
-              className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
-            >
-              <option value="">Select property...</option>
-              {properties?.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </select>
-            {errors.property_id && (
-              <p className="mt-1 text-xs text-[#ff453a]">{errors.property_id.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#98989d] mb-2">
-              Room *
-            </label>
-            <select
-              {...register('room_id', { required: 'Room is required' })}
-              disabled={!selectedPropertyId}
-              className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent disabled:opacity-50"
-            >
-              <option value="">Select room...</option>
-              {availableRooms?.map((room) => (
-                <option key={room.id} value={room.id}>
-                  Unit {room.unit_number} - Room {room.room_number} (${room.rent_amount}/mo)
-                </option>
-              ))}
-            </select>
-            {errors.room_id && (
-              <p className="mt-1 text-xs text-[#ff453a]">{errors.room_id.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+            {/* Property Selection */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">
-                Lease Start *
+                Property *
               </label>
-              <input
-                type="date"
-                {...register('lease_start', { required: 'Lease start is required' })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
-              />
+              <select
+                {...register('property_id', { required: 'Property is required' })}
+                onChange={(e) => handlePropertyChange(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+              >
+                <option value="">Select a property</option>
+                {properties?.map((property) => (
+                  <option key={property.id} value={property.id}>
+                    {property.name}
+                  </option>
+                ))}
+              </select>
+              {errors.property_id && (
+                <p className="text-[#ff453a] text-sm mt-1">{errors.property_id.message}</p>
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#98989d] mb-2">
-                Lease End *
-              </label>
-              <input
-                type="date"
-                {...register('lease_end', { required: 'Lease end is required' })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
-              />
-            </div>
-          </div>
+            {/* Unit Selection */}
+            {selectedPropertyId && (
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Unit *
+                </label>
+                <select
+                  {...register('unit_id', { required: 'Unit is required' })}
+                  onChange={(e) => handleUnitChange(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                >
+                  <option value="">Select a unit</option>
+                  {units?.map((unit: Unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      Unit {unit.unit_number}
+                    </option>
+                  ))}
+                </select>
+                {errors.unit_id && (
+                  <p className="text-[#ff453a] text-sm mt-1">{errors.unit_id.message}</p>
+                )}
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-4">
+            {/* Room Selection */}
+            {selectedUnitId && (
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Room *
+                </label>
+                <select
+                  {...register('room_id', { required: 'Room is required' })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                >
+                  <option value="">Select a room</option>
+                  {availableRooms?.map((room: Room) => (
+                    <option key={room.id} value={room.id}>
+                      Unit {getUnitNumber(room.unit_id)} - Room {room.room_number} (${room.rent_amount}/mo)
+                    </option>
+                  ))}
+                </select>
+                {errors.room_id && (
+                  <p className="text-[#ff453a] text-sm mt-1">{errors.room_id.message}</p>
+                )}
+                {availableRooms?.length === 0 && (
+                  <p className="text-[#ff9f0a] text-sm mt-1">
+                    No vacant rooms available in this unit
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Lease Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Lease Start *
+                </label>
+                <input
+                  type="date"
+                  {...register('lease_start', { required: 'Lease start date is required' })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                />
+                {errors.lease_start && (
+                  <p className="text-[#ff453a] text-sm mt-1">{errors.lease_start.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Lease End *
+                </label>
+                <input
+                  type="date"
+                  {...register('lease_end', { required: 'Lease end date is required' })}
+                  className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                />
+                {errors.lease_end && (
+                  <p className="text-[#ff453a] text-sm mt-1">{errors.lease_end.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Rent Amount */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">
                 Monthly Rent *
@@ -189,43 +263,36 @@ export function CreateTenantModal({ onClose }: CreateTenantModalProps) {
               <input
                 type="number"
                 step="0.01"
-                {...register('rent_amount', { required: 'Rent amount is required', min: 0 })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
+                {...register('rent_amount', { required: 'Rent amount is required' })}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                placeholder="1000.00"
               />
+              {errors.rent_amount && (
+                <p className="text-[#ff453a] text-sm mt-1">{errors.rent_amount.message}</p>
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#98989d] mb-2">
-                Deposit Paid
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                {...register('deposit_paid', { min: 0 })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
-              />
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onClose}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? 'Creating...' : 'Create Tenant'}
+              </Button>
             </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? 'Creating...' : 'Create Tenant'}
-            </Button>
-          </div>
-        </form>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
