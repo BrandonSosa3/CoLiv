@@ -2,25 +2,24 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { unitsApi } from '@/lib/api/units'
 import { Button } from '@/components/ui/Button'
-import { AlertTriangle, X } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/Card'
+import { X, AlertTriangle } from 'lucide-react'
 
 interface DeleteUnitDialogProps {
   unitId: string
   unitNumber: string
+  propertyId: string
   onClose: () => void
 }
 
-export function DeleteUnitDialog({
-  unitId,
-  unitNumber,
-  onClose,
-}: DeleteUnitDialogProps) {
+export function DeleteUnitDialog({ unitId, unitNumber, propertyId, onClose }: DeleteUnitDialogProps) {
   const queryClient = useQueryClient()
 
   const deleteMutation = useMutation({
     mutationFn: () => unitsApi.delete(unitId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['units'] })
+      queryClient.invalidateQueries({ queryKey: ['units', propertyId] })
+      queryClient.invalidateQueries({ queryKey: ['units-with-rooms'] })
       toast.success('Unit deleted successfully')
       onClose()
     },
@@ -31,47 +30,54 @@ export function DeleteUnitDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-[#2c2c2e]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#ff453a]/10">
-              <AlertTriangle className="w-5 h-5 text-[#ff453a]" />
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[#ff453a]/10">
+                <AlertTriangle className="w-5 h-5 text-[#ff453a]" />
+              </div>
+              <h2 className="text-xl font-semibold text-white">Delete Unit</h2>
             </div>
-            <h2 className="text-xl font-semibold text-white">Delete Unit</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-[#2c2c2e] transition-colors"
-          >
-            <X className="w-5 h-5 text-[#98989d]" />
-          </button>
-        </div>
-
-        <div className="p-6">
-          <p className="text-[#98989d] mb-6">
-            Are you sure you want to delete <span className="text-white font-semibold">Unit {unitNumber}</span>? 
-            This will also delete all rooms in this unit. This action cannot be undone.
-          </p>
-
-          <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              className="flex-1"
+            <button
               onClick={onClose}
+              className="p-2 rounded-lg hover:bg-[#2c2c2e] transition-colors"
             >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              className="flex-1"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete Unit'}
-            </Button>
+              <X className="w-5 h-5 text-[#98989d]" />
+            </button>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
+              <p className="text-[#ff453a] font-medium mb-2">Warning</p>
+              <p className="text-[#98989d] text-sm">
+                This will permanently delete Unit {unitNumber} and all its rooms. 
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={onClose}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="flex-1"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Unit'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

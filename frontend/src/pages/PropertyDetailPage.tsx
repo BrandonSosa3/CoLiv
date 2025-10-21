@@ -177,7 +177,7 @@ export function PropertyDetailPage() {
         ) : (
           <div className="space-y-6">
             {unitsWithRooms.data?.map((unit) => (
-              <UnitCard key={unit.id} unit={unit} rooms={unit.rooms} />
+              <UnitCard key={unit.id} unit={unit} rooms={unit.rooms} propertyId={id!} />
             ))}
           </div>
         )}
