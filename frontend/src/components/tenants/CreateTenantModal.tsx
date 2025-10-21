@@ -33,7 +33,7 @@ export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPrope
   const [selectedPropertyId, setSelectedPropertyId] = useState(preSelectedPropertyId || '')
   const [selectedUnitId, setSelectedUnitId] = useState('')
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>()
 
   // Get all properties
   const { data: properties } = useQuery({
@@ -62,17 +62,6 @@ export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPrope
       setValue('property_id', properties[0].id)
     }
   }, [properties, selectedPropertyId, setValue])
-
-  // Handle preselected room
-  useEffect(() => {
-    if (preSelectedRoomId && units) {
-      // Find which unit contains the preselected room
-      const unitWithRoom = units.find(unit => {
-        // We'll need to check rooms for this unit
-        // This will be handled when rooms data is available
-      })
-    }
-  }, [preSelectedRoomId, units])
 
   // Set preselected room when rooms data is available
   useEffect(() => {
