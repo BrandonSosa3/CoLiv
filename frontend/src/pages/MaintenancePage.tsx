@@ -10,7 +10,7 @@ import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { CreateMaintenanceModal } from '@/components/maintenance/CreateMaintenanceModal'
 import { UpdateStatusModal } from '@/components/maintenance/UpdateStatusModal'
-import { Wrench, Plus, AlertCircle, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { Wrench, Plus, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 export function MaintenancePage() {
@@ -76,7 +76,6 @@ export function MaintenancePage() {
 
   const openCount = allRequests.filter(r => r.status === 'open').length
   const inProgressCount = allRequests.filter(r => r.status === 'in_progress').length
-  const resolvedCount = allRequests.filter(r => r.status === 'resolved').length
   const urgentCount = allRequests.filter(r => r.priority === 'urgent' && r.status !== 'resolved' && r.status !== 'closed').length
 
   const priorityColors = {

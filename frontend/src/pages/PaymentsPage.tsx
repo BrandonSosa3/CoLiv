@@ -279,10 +279,10 @@ export function PaymentsPage() {
                               Mark Paid
                             </Button>
                           )}
-                          {payment.status === 'paid' && payment.payment_date && (
+                          {payment.status === 'paid' && payment.created_at && (
                             <div>
                               <p className="text-[#636366] text-xs">Paid on</p>
-                              <p className="text-[#98989d] text-sm">{formatDate(payment.payment_date)}</p>
+                              <p className="text-[#98989d] text-sm">{formatDate(payment.created_at)}</p>
                             </div>
                           )}
                         </div>

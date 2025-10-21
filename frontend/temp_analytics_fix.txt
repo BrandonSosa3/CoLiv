@@ -1,0 +1,5 @@
+// Find line 228 and change to:
+formatCurrency((value as number))
+
+// Find line 269 and change to:
+.map(({ name, value }: { name: string; value: number }) => ({
