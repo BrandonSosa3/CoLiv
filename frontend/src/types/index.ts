@@ -84,6 +84,7 @@ export interface LoginCredentials {
 export interface SignupData {
   email: string
   password: string
+  company_name: string
   role: 'operator' | 'tenant'
 }
 
