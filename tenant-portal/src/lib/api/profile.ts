@@ -10,9 +10,24 @@ export interface TenantProfile {
   created_at: string
 }
 
+export interface LeaseInfo {
+  property_name: string
+  unit_number: string
+  room_number: string
+  lease_start: string
+  lease_end: string
+  rent_amount: number
+  status: string
+}
+
 export const profileApi = {
   getProfile: async (): Promise<TenantProfile> => {
     const { data } = await apiClient.get('/tenants/me/profile')
+    return data
+  },
+
+  getLeaseInfo: async (): Promise<LeaseInfo> => {
+    const { data } = await apiClient.get('/tenants/me/lease')
     return data
   },
 
