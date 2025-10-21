@@ -6,7 +6,7 @@ import { preferencesApi, RoommateMatch } from '@/lib/api/preferences'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { Sparkles, Users, TrendingUp } from 'lucide-react'
+import { Sparkles, Users } from 'lucide-react'
 
 interface FormData {
   cleanliness_importance: number

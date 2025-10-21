@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { announcementsApi } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { Megaphone, AlertCircle, Info } from 'lucide-react'
+import { Megaphone, AlertCircle } from 'lucide-react'
 
 export function AnnouncementsPage() {
   const { data: announcements, isLoading } = useQuery({

@@ -5,10 +5,9 @@ import { maintenanceApi } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { Wrench, Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Wrench, Plus, Clock, CheckCircle} from 'lucide-react'
 
 export function MaintenancePage() {
-  const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   const { data: requests, isLoading } = useQuery({
