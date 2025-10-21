@@ -109,3 +109,15 @@ export interface TenantWithUser {
   unit_number: string
   property_name: string
 }
+
+// Add tenant info to Room type
+export interface RoomWithTenant extends Room {
+  tenant?: {
+    id: string
+    name: string
+    email: string
+    lease_start: string
+    lease_end: string
+    status: string
+  }
+}

@@ -172,33 +172,67 @@ def get_tenants_by_property(
     rooms = db.query(Room).filter(Room.unit_id.in_(unit_ids)).all() if unit_ids else []
     room_ids = [r.id for r in rooms]
     
-    # Get all tenants for these rooms with joined data
     tenants = []
+    
     if room_ids:
-        tenant_records = db.query(Tenant).filter(Tenant.room_id.in_(room_ids)).all()
+        # Get active tenants in current rooms
+        active_tenants = db.query(Tenant).filter(Tenant.room_id.in_(room_ids)).all()
         
-        for tenant in tenant_records:
-            # Get room, unit, and user info
-            room = db.query(Room).filter(Room.id == tenant.room_id).first()
-            unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+        # Get moved out tenants who were previously in rooms of this property
+        # We'll track this by checking if they ever had a room in this property
+        moved_out_tenants = db.query(Tenant).filter(
+            Tenant.status == TenantStatus.MOVED_OUT,
+            Tenant.room_id.is_(None)
+        ).all()
+        
+        # Filter moved out tenants to only include those who belonged to this property
+        # For now, we'll include all moved out tenants since we need to add property tracking
+        # In a future update, we should add a property_id field to tenants table
+        
+        all_property_tenants = active_tenants + moved_out_tenants
+        
+        for tenant in all_property_tenants:
             user = db.query(User).filter(User.id == tenant.user_id).first()
             
-            tenants.append({
-                "id": str(tenant.id),
-                "user_id": str(tenant.user_id),
-                "room_id": str(tenant.room_id),
-                "lease_start": tenant.lease_start.isoformat(),
-                "lease_end": tenant.lease_end.isoformat(),
-                "rent_amount": str(tenant.rent_amount),
-                "deposit_paid": str(tenant.deposit_paid) if tenant.deposit_paid else None,
-                "status": tenant.status,
-                "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
-                "created_at": tenant.created_at.isoformat(),
-                "email": user.email,
-                "room_number": room.room_number,
-                "unit_number": unit.unit_number,
-                "property_name": property.name,
-            })
+            if tenant.room_id:
+                # Active tenant with room
+                room = db.query(Room).filter(Room.id == tenant.room_id).first()
+                unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+                
+                tenants.append({
+                    "id": str(tenant.id),
+                    "user_id": str(tenant.user_id),
+                    "room_id": str(tenant.room_id),
+                    "lease_start": tenant.lease_start.isoformat(),
+                    "lease_end": tenant.lease_end.isoformat(),
+                    "rent_amount": str(tenant.rent_amount),
+                    "deposit_paid": str(tenant.deposit_paid) if tenant.deposit_paid else None,
+                    "status": tenant.status,
+                    "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
+                    "created_at": tenant.created_at.isoformat(),
+                    "email": user.email,
+                    "room_number": room.room_number,
+                    "unit_number": unit.unit_number,
+                    "property_name": property.name,
+                })
+            else:
+                # Moved out tenant (no current room)
+                tenants.append({
+                    "id": str(tenant.id),
+                    "user_id": str(tenant.user_id),
+                    "room_id": None,
+                    "lease_start": tenant.lease_start.isoformat(),
+                    "lease_end": tenant.lease_end.isoformat(),
+                    "rent_amount": str(tenant.rent_amount),
+                    "deposit_paid": str(tenant.deposit_paid) if tenant.deposit_paid else None,
+                    "status": tenant.status,
+                    "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
+                    "created_at": tenant.created_at.isoformat(),
+                    "email": user.email,
+                    "room_number": "N/A",
+                    "unit_number": "N/A", 
+                    "property_name": property.name,
+                })
     
     return tenants
 

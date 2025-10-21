@@ -57,13 +57,13 @@ def create_room(
     return room
 
 
-@router.get("/unit/{unit_id}", response_model=List[RoomResponse])
+@router.get("/unit/{unit_id}")
 def get_rooms_by_unit(
     unit_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Get all rooms for a specific unit"""
+    """Get all rooms for a specific unit with tenant information"""
     
     # Get unit and verify access
     unit = db.query(Unit).filter(Unit.id == unit_id).first()
@@ -87,7 +87,45 @@ def get_rooms_by_unit(
         )
     
     rooms = db.query(Room).filter(Room.unit_id == unit_id).all()
-    return rooms
+    
+    # Add tenant information to each room
+    rooms_with_tenants = []
+    for room in rooms:
+        # Get tenant in this room (if any)
+        tenant = db.query(Tenant).filter(
+            Tenant.room_id == room.id,
+            Tenant.status == TenantStatus.ACTIVE
+        ).first()
+        
+        room_data = {
+            "id": str(room.id),
+            "room_number": room.room_number,
+            "room_type": room.room_type,
+            "rent_amount": room.rent_amount,
+            "size_sqft": room.size_sqft,
+            "has_private_bath": room.has_private_bath,
+            "status": room.status,
+            "unit_id": str(room.unit_id),
+            "created_at": room.created_at,
+            "updated_at": room.updated_at,
+            "tenant": None
+        }
+        
+        if tenant:
+            # Get user info for tenant
+            user = db.query(User).filter(User.id == tenant.user_id).first()
+            room_data["tenant"] = {
+                "id": str(tenant.id),
+                "name": user.email.split('@')[0],  # Use email prefix as name
+                "email": user.email,
+                "lease_start": tenant.lease_start,
+                "lease_end": tenant.lease_end,
+                "status": tenant.status
+            }
+        
+        rooms_with_tenants.append(room_data)
+    
+    return rooms_with_tenants
 
 
 @router.get("/{room_id}", response_model=RoomResponse)

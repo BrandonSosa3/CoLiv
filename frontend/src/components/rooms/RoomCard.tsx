@@ -5,11 +5,20 @@ import { EditRoomModal } from '@/components/rooms/EditRoomModal'
 import { DeleteRoomDialog } from '@/components/rooms/DeleteRoomDialog'
 import { CreateTenantModal } from '@/components/tenants/CreateTenantModal'
 import { Room } from '@/types'
-import { Bed, Edit2, Trash2, UserPlus } from 'lucide-react'
+import { Bed, User, Edit2, Trash2, UserPlus, Calendar, Mail } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface RoomCardProps {
-  room: Room
+  room: Room & {
+    tenant?: {
+      id: string
+      name: string
+      email: string
+      lease_start: string
+      lease_end: string
+      status: string
+    }
+  }
   unitId: string
   propertyId: string
 }
@@ -92,6 +101,29 @@ export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
             </div>
           </div>
 
+          {/* Tenant Information */}
+          {room.tenant && room.status === 'occupied' && (
+            <div className="mt-4 pt-4 border-t border-[#2c2c2e]">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-4 h-4 text-[#32d74b]" />
+                <span className="text-sm font-medium text-white">Current Tenant</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-3 h-3 text-[#636366]" />
+                  <span className="text-[#98989d]">{room.tenant.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="w-3 h-3 text-[#636366]" />
+                  <span className="text-[#98989d]">
+                    {new Date(room.tenant.lease_start).toLocaleDateString()} - {new Date(room.tenant.lease_end).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Tenant Button for Vacant Rooms */}
           {room.status === 'vacant' && (
             <div className="mt-4 pt-4 border-t border-[#2c2c2e]">
               <Button
