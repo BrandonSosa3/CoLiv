@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -38,8 +38,8 @@ export function PreferencesPage() {
     enabled: showMatches && !!preferences,
   })
 
-  const { register, handleSubmit, watch } = useForm<FormData>({
-    defaultValues: preferences || {
+  const { register, handleSubmit, watch, setValue } = useForm<FormData>({
+    defaultValues: {
       cleanliness_importance: 3,
       noise_tolerance: 3,
       guest_frequency: 3,
@@ -51,8 +51,25 @@ export function PreferencesPage() {
       overnight_guests: true,
       interests: '',
       notes: '',
-    },
+    }
   })
+  
+  // Add this useEffect to populate form when data loads
+  useEffect(() => {
+    if (preferences) {
+      setValue('cleanliness_importance', preferences.cleanliness_importance)
+      setValue('noise_tolerance', preferences.noise_tolerance)
+      setValue('guest_frequency', preferences.guest_frequency)
+      setValue('sleep_schedule', preferences.sleep_schedule)
+      setValue('work_schedule', preferences.work_schedule)
+      setValue('social_preference', preferences.social_preference)
+      setValue('smoking', preferences.smoking)
+      setValue('pets', preferences.pets)
+      setValue('overnight_guests', preferences.overnight_guests)
+      setValue('interests', preferences.interests || '')
+      setValue('notes', preferences.notes || '')
+    }
+  }, [preferences, setValue])
 
   const saveMutation = useMutation({
     mutationFn: (data: FormData) => {
