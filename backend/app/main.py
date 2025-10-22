@@ -13,7 +13,6 @@ from app.routers import (
     payments,
     maintenance,
     announcements,
-    preferences,
     tenant_portal,
 )
 
@@ -77,5 +76,4 @@ app.include_router(tenants.router, prefix="/api/v1")
 app.include_router(payments.router, prefix="/api/v1")
 app.include_router(maintenance.router, prefix="/api/v1")
 app.include_router(announcements.router, prefix="/api/v1")
-app.include_router(preferences.router, prefix="/api/v1")
 app.include_router(tenant_portal.router, prefix="/api/v1")

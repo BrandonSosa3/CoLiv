@@ -8,4 +8,3 @@ import app.routers.payments as payments
 import app.routers.maintenance as maintenance
 import app.routers.announcements as announcements
 import app.routers.tenant_portal as tenant_portal
-import app.routers.preferences as preferences
