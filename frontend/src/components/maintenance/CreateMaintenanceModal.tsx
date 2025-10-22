@@ -205,10 +205,10 @@ export function CreateMaintenanceModal({ onClose }: CreateMaintenanceModalProps)
               {...register('priority', { required: 'Priority is required' })}
               className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
             >
-              <option value="low">Low - Can wait a week</option>
-              <option value="medium">Medium - Fix within a few days</option>
-              <option value="high">High - Fix within 24 hours</option>
-              <option value="urgent">Urgent - Fix immediately</option>
+              <option value="LOW">Low - Can wait a week</option>
+              <option value="MEDIUM">Medium - Fix within a few days</option>
+              <option value="HIGH">High - Fix within 24 hours</option>
+              <option value="URGENT">Urgent - Fix immediately</option>
             </select>
             {errors.priority && (
               <p className="mt-1 text-sm text-[#ff453a]">{errors.priority.message}</p>

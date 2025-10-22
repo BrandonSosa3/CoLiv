@@ -38,10 +38,10 @@ export function MaintenancePage() {
   }
 
   const priorityColors = {
-    low: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
-    medium: 'bg-[#667eea]/10 text-[#667eea] border-[#667eea]/20',
-    high: 'bg-[#ff9f0a]/10 text-[#ff9f0a] border-[#ff9f0a]/20',
-    urgent: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
+    LOW: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
+    MEDIUM: 'bg-[#667eea]/10 text-[#667eea] border-[#667eea]/20',
+    HIGH: 'bg-[#ff9f0a]/10 text-[#ff9f0a] border-[#ff9f0a]/20',
+    URGENT: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
   }
 
   return (
@@ -187,7 +187,7 @@ function CreateMaintenanceModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState('medium')
+  const [priority, setPriority] = useState('MEDIUM')
 
   const createMutation = useMutation({
     mutationFn: maintenanceApi.create,
@@ -251,10 +251,10 @@ function CreateMaintenanceModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setPriority(e.target.value)}
               className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
             >
-              <option value="low">Low - Can wait a week</option>
-              <option value="medium">Normal - Fix within a few days</option>
-              <option value="high">High - Fix within 24 hours</option>
-              <option value="urgent">Urgent - Fix immediately</option>
+              <option value="LOW">Low - Can wait a week</option>
+              <option value="MEDIUM">Normal - Fix within a few days</option>
+              <option value="HIGH">High - Fix within 24 hours</option>
+              <option value="URGENT">Urgent - Fix immediately</option>
             </select>
           </div>
 

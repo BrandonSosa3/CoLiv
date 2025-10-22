@@ -7,7 +7,7 @@ export interface MaintenanceRequest {
   room_id?: string
   title: string
   description: string
-  priority: 'low' | 'medium' | 'high' | 'urgent'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
   status: 'open' | 'in_progress' | 'resolved' | 'closed'
   assigned_to?: string
   created_at: string

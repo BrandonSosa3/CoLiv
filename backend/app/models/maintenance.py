@@ -7,10 +7,10 @@ from app.models.base import BaseModel
 
 
 class MaintenancePriority(str, enum.Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    URGENT = "urgent"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
 
 
 class MaintenanceStatus(str, enum.Enum):
