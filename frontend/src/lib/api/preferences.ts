@@ -53,9 +53,16 @@ export const preferencesApi = {
     return data
   },
 
-  getByTenant: async (tenantId: string): Promise<TenantPreference> => {
-    const { data } = await apiClient.get<TenantPreference>(`/preferences/tenant/${tenantId}`)
-    return data
+  getByTenant: async (tenantId: string): Promise<TenantPreference | null> => {
+    try {
+      const { data } = await apiClient.get<TenantPreference>(`/preferences/tenant/${tenantId}`)
+      return data
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null
+      }
+      throw error
+    }
   },
 
   update: async (

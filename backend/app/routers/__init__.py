@@ -7,4 +7,5 @@ import app.routers.tenants as tenants
 import app.routers.payments as payments
 import app.routers.maintenance as maintenance
 import app.routers.announcements as announcements
+import app.routers.preferences as preferences
 import app.routers.tenant_portal as tenant_portal

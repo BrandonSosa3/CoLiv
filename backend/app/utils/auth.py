@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.models.user import User
 from app.models.operator import Operator
+from app.models.tenant import Tenant
 from app.config import get_settings
 
 settings = get_settings()
@@ -63,6 +64,27 @@ def get_current_user(
         raise credentials_exception
     
     return user
+
+
+def get_current_tenant(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Tenant:
+    """Get the current tenant from the authenticated user"""
+    if current_user.role != 'tenant':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Tenant role required."
+        )
+    
+    tenant = db.query(Tenant).filter(Tenant.user_id == current_user.id).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant profile not found"
+        )
+    
+    return tenant
 
 
 def get_current_operator(
