@@ -17,7 +17,7 @@ export function DashboardLayout() {
     { path: '/dashboard/payments', icon: DollarSign, label: 'Payments' },
     { path: '/dashboard/maintenance', icon: Wrench, label: 'Maintenance' },
     { path: '/dashboard/announcements', icon: Megaphone, label: 'Announcements' },
-    { path: '/dashboard/analytics', icon: TrendingUp, label: 'Analytics' },
+    { path: '/dashboard/analytics', icon: TrendingUp, label: 'Analytics' }, 
 
   ]
 

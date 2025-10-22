@@ -4,12 +4,6 @@
 
 ---
 
-in this video I’ll be walking you through a project I built called CoLiv, a co-living operations platform designed for small property operators.
-
-CoLiv is built to simplify room-level management — unlike most property management tools that stop at the unit level, this one tracks everything down to the individual room. That means each room can have its own pricing, size, and tenant profile, giving operators full visibility and flexibility across their properties.
-In this walkthrough, I’ll show how the system works from both the admin and tenant perspectives, including property setup, room tracking, and tenant interactions.”
-I have also began implementing an ai algorithm which is going to be a roommate matcher for people who are interested in picking a roommate who is random but still compatible with their lifestyle.
-
 ## EXECUTIVE SUMMARY
 
 **What:** Co-living operations software with room-level management + Tenant Portal  
