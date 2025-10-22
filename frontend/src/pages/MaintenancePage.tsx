@@ -76,13 +76,13 @@ export function MaintenancePage() {
 
   const openCount = allRequests.filter(r => r.status === 'open').length
   const inProgressCount = allRequests.filter(r => r.status === 'in_progress').length
-  const urgentCount = allRequests.filter(r => r.priority === 'urgent' && r.status !== 'resolved' && r.status !== 'closed').length
+  const urgentCount = allRequests.filter(r => r.priority === 'URGENT' && r.status !== 'resolved' && r.status !== 'closed').length
 
   const priorityColors = {
-    low: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
-    medium: 'bg-[#ffd60a]/10 text-[#ffd60a] border-[#ffd60a]/20',
-    high: 'bg-[#ff9f0a]/10 text-[#ff9f0a] border-[#ff9f0a]/20',
-    urgent: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
+    LOW: 'bg-[#636366]/10 text-[#636366] border-[#636366]/20',
+    MEDIUM: 'bg-[#667eea]/10 text-[#667eea] border-[#667eea]/20',
+    HIGH: 'bg-[#ff9f0a]/10 text-[#ff9f0a] border-[#ff9f0a]/20',
+    URGENT: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
   }
 
   const statusIcons = {
