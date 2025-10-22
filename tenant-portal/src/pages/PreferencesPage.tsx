@@ -126,7 +126,7 @@ export function PreferencesPage() {
           <Button onClick={() => setShowMatches(!showMatches)}>
             <Users className="w-4 h-4 mr-2" />
             {showMatches ? 'Hide Matches' : 'View Matches'}
-          </Button>
+          </Button> 
         )}
       </div>
 
