@@ -20,15 +20,21 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Drop the existing enum and recreate it with the correct values
+    # First, remove the default value to avoid dependency issues
+    op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority DROP DEFAULT")
     op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority TYPE VARCHAR(10)")
-    op.execute("DROP TYPE maintenancepriority")
+    op.execute("DROP TYPE maintenancepriority CASCADE")
     op.execute("CREATE TYPE maintenancepriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT')")
     op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority TYPE maintenancepriority USING priority::maintenancepriority")
+    # Restore the default value
+    op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority SET DEFAULT 'MEDIUM'::maintenancepriority")
 
 
 def downgrade() -> None:
     # Revert back to the original enum
+    op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority DROP DEFAULT")
     op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority TYPE VARCHAR(10)")
-    op.execute("DROP TYPE maintenancepriority")
+    op.execute("DROP TYPE maintenancepriority CASCADE")
     op.execute("CREATE TYPE maintenancepriority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT')")
     op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority TYPE maintenancepriority USING priority::maintenancepriority")
+    op.execute("ALTER TABLE maintenance_requests ALTER COLUMN priority SET DEFAULT 'MEDIUM'::maintenancepriority")
