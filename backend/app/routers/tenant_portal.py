@@ -157,7 +157,7 @@ def create_maintenance_request(
         room_id=room.id,
         title=request_data.get('title'),
         description=request_data.get('description'),
-        priority=request_data.get('priority', 'normal'),
+        priority=request_data.get('priority', 'medium'),
         status='open'
     )
     
