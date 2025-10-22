@@ -12,7 +12,7 @@ class MaintenanceRequestBase(BaseModel):
     room_id: Optional[UUID] = None
     title: str
     description: Optional[str] = None
-    priority: Optional[MaintenancePriority] = MaintenancePriority.medium
+    priority: Optional[MaintenancePriority] = MaintenancePriority.MEDIUM
 
 
 class MaintenanceRequestCreate(MaintenanceRequestBase):
