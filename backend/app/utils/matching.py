@@ -1,150 +1,119 @@
-from app.models.tenant_preference import TenantPreference
 from typing import List, Dict
-import re
+from app.models.tenant_preference import TenantPreference
 
 
 def calculate_compatibility_score(pref1: TenantPreference, pref2: TenantPreference) -> Dict:
     """
-    Calculate compatibility score between two tenant preferences.
-    Returns a dictionary with overall score and breakdown by category.
+    Calculate compatibility score between two tenants (0-100%)
+    Returns dict with overall score and breakdown
     """
     
-    # Lifestyle compatibility (1-5 scale, closer values = higher score)
-    cleanliness_score = 100 - abs(pref1.cleanliness_importance - pref2.cleanliness_importance) * 20
-    noise_score = 100 - abs(pref1.noise_tolerance - pref2.noise_tolerance) * 20
-    social_score = 100 - abs(pref1.social_preference - pref2.social_preference) * 20
-    guest_score = 100 - abs(pref1.guest_frequency - pref2.guest_frequency) * 20
+    if not pref1 or not pref2:
+        return {"overall": 0, "breakdown": {}}
     
-    # Schedule compatibility
-    sleep_score = calculate_schedule_compatibility(pref1.sleep_schedule, pref2.sleep_schedule)
-    work_score = calculate_schedule_compatibility(pref1.work_schedule, pref2.work_schedule)
+    scores = {}
+    weights = {
+        "cleanliness": 0.25,      # 25% - Very important
+        "noise": 0.15,             # 15%
+        "sleep_schedule": 0.15,    # 15%
+        "social": 0.10,            # 10%
+        "guests": 0.10,            # 10%
+        "work_schedule": 0.10,     # 10%
+        "dealbreakers": 0.10,      # 10% - Smoking/pets
+        "interests": 0.05,         # 5% - Nice to have
+    }
     
-    # Dealbreakers (binary - if mismatch, significant penalty)
+    # 1. Cleanliness compatibility (closer is better)
+    cleanliness_diff = abs(pref1.cleanliness_importance - pref2.cleanliness_importance)
+    scores["cleanliness"] = max(0, 100 - (cleanliness_diff * 25))
+    
+    # 2. Noise tolerance (closer is better)
+    noise_diff = abs(pref1.noise_tolerance - pref2.noise_tolerance)
+    scores["noise"] = max(0, 100 - (noise_diff * 25))
+    
+    # 3. Sleep schedule compatibility
+    sleep_compat = {
+        ("early_bird", "early_bird"): 100,
+        ("night_owl", "night_owl"): 100,
+        ("flexible", "flexible"): 90,
+        ("early_bird", "flexible"): 80,
+        ("night_owl", "flexible"): 80,
+        ("flexible", "early_bird"): 80,
+        ("flexible", "night_owl"): 80,
+        ("early_bird", "night_owl"): 30,  # Potential conflict
+        ("night_owl", "early_bird"): 30,
+    }
+    sleep_key = (pref1.sleep_schedule or "flexible", pref2.sleep_schedule or "flexible")
+    scores["sleep_schedule"] = sleep_compat.get(sleep_key, 50)
+    
+    # 4. Social preference (closer is better, but not critical)
+    social_diff = abs(pref1.social_preference - pref2.social_preference)
+    scores["social"] = max(0, 100 - (social_diff * 20))
+    
+    # 5. Guest frequency (closer is better)
+    guest_diff = abs(pref1.guest_frequency - pref2.guest_frequency)
+    scores["guests"] = max(0, 100 - (guest_diff * 25))
+    
+    # 6. Work schedule compatibility
+    work_compat = {
+        ("remote", "remote"): 100,      # Both home often
+        ("office", "office"): 100,      # Both away often
+        ("remote", "office"): 90,       # Balanced
+        ("office", "remote"): 90,
+        ("hybrid", "hybrid"): 95,
+        ("hybrid", "remote"): 85,
+        ("hybrid", "office"): 85,
+        ("remote", "hybrid"): 85,
+        ("office", "hybrid"): 85,
+        ("student", "student"): 90,
+        ("student", "remote"): 80,
+        ("student", "office"): 85,
+        ("student", "hybrid"): 85,
+    }
+    work_key = (pref1.work_schedule or "remote", pref2.work_schedule or "remote")
+    scores["work_schedule"] = work_compat.get(work_key, 75)
+    
+    # 7. Dealbreakers (if mismatched on smoking/pets, major penalty)
     dealbreaker_score = 100
     if pref1.smoking != pref2.smoking:
-        dealbreaker_score -= 50  # Major incompatibility
+        dealbreaker_score -= 50  # Major issue
     if pref1.pets != pref2.pets:
-        dealbreaker_score -= 30  # Moderate incompatibility
+        dealbreaker_score -= 30  # Moderate issue
     if pref1.overnight_guests != pref2.overnight_guests:
-        dealbreaker_score -= 20  # Minor incompatibility
+        dealbreaker_score -= 20
+    scores["dealbreakers"] = max(0, dealbreaker_score)
     
-    # Interests compatibility
-    interests_score = calculate_interests_compatibility(pref1.interests, pref2.interests)
+    # 8. Shared interests (bonus points)
+    interests1 = set((pref1.interests or "").lower().split(","))
+    interests2 = set((pref2.interests or "").lower().split(","))
+    interests1 = {i.strip() for i in interests1 if i.strip()}
+    interests2 = {i.strip() for i in interests2 if i.strip()}
     
-    # Calculate weighted average
-    weights = {
-        'cleanliness': 0.15,
-        'noise': 0.15,
-        'social': 0.15,
-        'guests': 0.10,
-        'sleep_schedule': 0.10,
-        'work_schedule': 0.10,
-        'dealbreakers': 0.20,
-        'interests': 0.05
-    }
+    if interests1 and interests2:
+        common_interests = interests1.intersection(interests2)
+        interest_score = min(100, len(common_interests) * 25)
+    else:
+        interest_score = 50  # Neutral if no interests listed
+    scores["interests"] = interest_score
     
-    overall_score = (
-        cleanliness_score * weights['cleanliness'] +
-        noise_score * weights['noise'] +
-        social_score * weights['social'] +
-        guest_score * weights['guests'] +
-        sleep_score * weights['sleep_schedule'] +
-        work_score * weights['work_schedule'] +
-        dealbreaker_score * weights['dealbreakers'] +
-        interests_score * weights['interests']
-    )
+    # Calculate weighted overall score
+    overall_score = sum(scores[key] * weights[key] for key in scores)
     
     return {
-        'overall': round(overall_score, 1),
-        'cleanliness': round(cleanliness_score, 1),
-        'noise': round(noise_score, 1),
-        'social': round(social_score, 1),
-        'guests': round(guest_score, 1),
-        'sleep_schedule': round(sleep_score, 1),
-        'work_schedule': round(work_score, 1),
-        'dealbreakers': round(dealbreaker_score, 1),
-        'interests': round(interests_score, 1)
+        "overall": round(overall_score, 1),
+        "breakdown": scores,
+        "common_interests": list(interests1.intersection(interests2)) if interests1 and interests2 else []
     }
 
 
-def calculate_schedule_compatibility(schedule1: str, schedule2: str) -> float:
-    """Calculate compatibility between two schedules"""
-    if not schedule1 or not schedule2:
-        return 50  # Neutral if not specified
-    
-    schedule1 = schedule1.lower()
-    schedule2 = schedule2.lower()
-    
-    # Exact match
-    if schedule1 == schedule2:
-        return 100
-    
-    # Compatible schedules
-    compatible_pairs = [
-        ('early', 'flexible'),
-        ('late', 'flexible'),
-        ('flexible', 'early'),
-        ('flexible', 'late'),
-        ('remote', 'flexible'),
-        ('hybrid', 'flexible'),
-        ('flexible', 'remote'),
-        ('flexible', 'hybrid')
-    ]
-    
-    for pair in compatible_pairs:
-        if (schedule1 == pair[0] and schedule2 == pair[1]) or (schedule1 == pair[1] and schedule2 == pair[0]):
-            return 80
-    
-    # Incompatible schedules
-    incompatible_pairs = [
-        ('early', 'late'),
-        ('late', 'early'),
-        ('office', 'remote'),
-        ('remote', 'office')
-    ]
-    
-    for pair in incompatible_pairs:
-        if (schedule1 == pair[0] and schedule2 == pair[1]) or (schedule1 == pair[1] and schedule2 == pair[0]):
-            return 20
-    
-    # Default neutral score
-    return 50
-
-
-def calculate_interests_compatibility(interests1: str, interests2: str) -> float:
-    """Calculate compatibility based on shared interests"""
-    if not interests1 or not interests2:
-        return 50  # Neutral if not specified
-    
-    # Parse interests (comma-separated)
-    interests1_list = [interest.strip().lower() for interest in interests1.split(',') if interest.strip()]
-    interests2_list = [interest.strip().lower() for interest in interests2.split(',') if interest.strip()]
-    
-    if not interests1_list or not interests2_list:
-        return 50
-    
-    # Calculate Jaccard similarity
-    set1 = set(interests1_list)
-    set2 = set(interests2_list)
-    
-    intersection = len(set1.intersection(set2))
-    union = len(set1.union(set2))
-    
-    if union == 0:
-        return 50
-    
-    similarity = intersection / union
-    return similarity * 100
-
-
-def find_roommate_matches(
+def get_best_matches_for_tenant(
     tenant_pref: TenantPreference, 
     candidate_prefs: List[TenantPreference], 
     top_n: int = 5
 ) -> List[Dict]:
     """
-    Find the best roommate matches for a tenant.
-    Returns a list of matches sorted by compatibility score.
+    Find best roommate matches for a tenant
+    Returns list of matches sorted by compatibility score
     """
     matches = []
     
@@ -152,38 +121,15 @@ def find_roommate_matches(
         if candidate_pref.tenant_id == tenant_pref.tenant_id:
             continue  # Skip self
         
-        # Calculate compatibility
         compatibility = calculate_compatibility_score(tenant_pref, candidate_pref)
-        
-        # Get common interests
-        common_interests = get_common_interests(tenant_pref.interests, candidate_pref.interests)
-        
-        # Create match object
-        match = {
-            'tenant_id': str(candidate_pref.tenant_id),
-            'email': candidate_pref.tenant.email if hasattr(candidate_pref, 'tenant') else 'Unknown',
-            'current_room_id': str(candidate_pref.tenant.room_id) if hasattr(candidate_pref, 'tenant') else 'Unknown',
-            'compatibility_score': compatibility['overall'],
-            'breakdown': compatibility,
-            'common_interests': common_interests
-        }
-        
-        matches.append(match)
+        matches.append({
+            "tenant_id": str(candidate_pref.tenant_id),
+            "compatibility_score": compatibility["overall"],
+            "breakdown": compatibility["breakdown"],
+            "common_interests": compatibility.get("common_interests", [])
+        })
     
-    # Sort by compatibility score (descending)
-    matches.sort(key=lambda x: x['compatibility_score'], reverse=True)
+    # Sort by compatibility score (highest first)
+    matches.sort(key=lambda x: x["compatibility_score"], reverse=True)
     
-    # Return top N matches
     return matches[:top_n]
-
-
-def get_common_interests(interests1: str, interests2: str) -> List[str]:
-    """Get list of common interests between two tenants"""
-    if not interests1 or not interests2:
-        return []
-    
-    interests1_list = [interest.strip().lower() for interest in interests1.split(',') if interest.strip()]
-    interests2_list = [interest.strip().lower() for interest in interests2.split(',') if interest.strip()]
-    
-    common = list(set(interests1_list).intersection(set(interests2_list)))
-    return common

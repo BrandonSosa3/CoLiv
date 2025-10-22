@@ -1,21 +1,20 @@
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional
 
 
 class TenantPreferenceBase(BaseModel):
     cleanliness_importance: int = 3
     noise_tolerance: int = 3
     guest_frequency: int = 3
-    sleep_schedule: str = "flexible"
-    work_schedule: str = "remote"
+    sleep_schedule: Optional[str] = "flexible"
+    work_schedule: Optional[str] = "remote"
     social_preference: int = 3
     smoking: bool = False
     pets: bool = False
     overnight_guests: bool = True
-    interests: Optional[str] = None
-    notes: Optional[str] = None
+    interests: Optional[str] = ""
+    notes: Optional[str] = ""
 
 
 class TenantPreferenceCreate(TenantPreferenceBase):
@@ -39,17 +38,6 @@ class TenantPreferenceUpdate(BaseModel):
 class TenantPreferenceResponse(TenantPreferenceBase):
     id: UUID
     tenant_id: UUID
-    created_at: datetime
-    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
-
-
-class RoommateMatch(BaseModel):
-    tenant_id: str
-    email: str
-    current_room_id: str
-    compatibility_score: float
-    breakdown: Dict[str, float]
-    common_interests: List[str]

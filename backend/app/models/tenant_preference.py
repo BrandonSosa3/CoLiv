@@ -3,10 +3,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
 
-from app.models.base import BaseModel
+from app.database import Base
+from app.utils.timestamps import TimestampMixin
 
 
-class TenantPreference(BaseModel):
+class TenantPreference(Base, TimestampMixin):
     __tablename__ = "tenant_preferences"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
