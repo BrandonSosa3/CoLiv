@@ -18,6 +18,8 @@ class TenantBase(BaseModel):
 
 class TenantCreate(TenantBase):
     email: EmailStr  # Accept email instead of user_id
+    first_name: str      # Add this field
+    last_name: str       # Add this field
     password: Optional[str] = "TempPassword123!"  # Optional password
 
 

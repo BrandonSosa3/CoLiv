@@ -112,11 +112,11 @@ def get_rooms_by_unit(
         }
         
         if tenant:
-            # Get user info for tenant
             user = db.query(User).filter(User.id == tenant.user_id).first()
             room_data["tenant"] = {
                 "id": str(tenant.id),
-                "name": user.email.split('@')[0],  # Use email prefix as name
+                "first_name": user.first_name,    # Add this
+                "last_name": user.last_name,      # Add this
                 "email": user.email,
                 "lease_start": tenant.lease_start,
                 "lease_end": tenant.lease_end,

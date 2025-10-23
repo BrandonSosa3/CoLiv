@@ -18,6 +18,8 @@ interface CreateTenantModalProps {
 }
 
 interface FormData {
+  first_name: string
+  last_name: string
   email: string
   password: string
   property_id: string
@@ -158,6 +160,35 @@ export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPrope
 
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#98989d] mb-2">
+                First Name *
+              </label>
+              <input
+                type="text"
+                {...register('first_name', { required: 'First name is required' })}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                placeholder="John"
+              />
+              {errors.first_name && (
+                <p className="text-[#ff453a] text-sm mt-1">{errors.first_name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#98989d] mb-2">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                {...register('last_name', { required: 'Last name is required' })}
+                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                placeholder="Doe"
+              />
+              {errors.last_name && (
+                <p className="text-[#ff453a] text-sm mt-1">{errors.last_name.message}</p>
+              )}
+            </div>
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">

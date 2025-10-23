@@ -103,6 +103,8 @@ def create_tenant(
         # Create new tenant user with a default password
         new_user = User(
             email=tenant.email,
+            first_name=tenant.first_name,  # Add this
+            last_name=tenant.last_name, 
             password_hash=get_password_hash(tenant.password if hasattr(tenant, 'password') else 'TempPassword123!'),
             role='tenant'
         )

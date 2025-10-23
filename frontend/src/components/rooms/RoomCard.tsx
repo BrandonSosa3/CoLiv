@@ -14,6 +14,8 @@ interface RoomCardProps {
       id: string
       name: string
       email: string
+      first_name: string
+      last_name: string
       lease_start: string
       lease_end: string
       status: string
@@ -109,6 +111,11 @@ export function RoomCard({ room, unitId, propertyId }: RoomCardProps) {
                 <span className="text-sm font-medium text-white">Current Tenant</span>
               </div>
               <div className="space-y-1">
+                <div className="text-sm">
+                  <span className="text-white font-medium">
+                    {room.tenant.first_name} {room.tenant.last_name}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="w-3 h-3 text-[#636366]" />
                   <span className="text-[#98989d]">{room.tenant.email}</span>
