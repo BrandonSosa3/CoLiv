@@ -116,6 +116,8 @@ def create_tenant(
         db_tenant = Tenant(
             user_id=user_id,
             room_id=tenant.room_id,
+            first_name=tenant.first_name,  # Add this
+            last_name=tenant.last_name, 
             lease_start=tenant.lease_start,
             lease_end=tenant.lease_end,
             rent_amount=tenant.rent_amount,
@@ -213,6 +215,8 @@ def get_tenants_by_property(
                     "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
                     "created_at": tenant.created_at.isoformat(),
                     "email": user.email,
+                    "first_name": user.first_name,  # ADD THIS LINE
+                    "last_name": user.last_name,    # ADD THIS LINE
                     "room_number": room.room_number,
                     "unit_number": unit.unit_number,
                     "property_name": property.name,
@@ -231,6 +235,8 @@ def get_tenants_by_property(
                     "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
                     "created_at": tenant.created_at.isoformat(),
                     "email": user.email,
+                    "first_name": user.first_name,  # ADD THIS LINE
+                    "last_name": user.last_name,    # ADD THIS LINE
                     "room_number": "N/A",
                     "unit_number": "N/A", 
                     "property_name": property.name,
@@ -283,6 +289,8 @@ def get_tenants_by_room(
             "move_in_date": tenant.move_in_date.isoformat() if tenant.move_in_date else None,
             "created_at": tenant.created_at.isoformat(),
             "email": user.email,
+            "first_name": user.first_name,  # ADD THIS LINE
+            "last_name": user.last_name,    # ADD THIS LINE
             "room_number": room.room_number,
             "unit_number": unit.unit_number,
             "property_name": property.name,
