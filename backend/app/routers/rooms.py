@@ -115,8 +115,8 @@ def get_rooms_by_unit(
             user = db.query(User).filter(User.id == tenant.user_id).first()
             room_data["tenant"] = {
                 "id": str(tenant.id),
-                "first_name": user.first_name,    # Add this
-                "last_name": user.last_name,      # Add this
+                "first_name": getattr(user, 'first_name', None) or "Unknown",
+                "last_name": getattr(user, 'last_name', None) or "User", 
                 "email": user.email,
                 "lease_start": tenant.lease_start,
                 "lease_end": tenant.lease_end,

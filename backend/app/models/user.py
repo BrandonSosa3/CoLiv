@@ -17,6 +17,8 @@ class User(BaseModel):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(SQLEnum(UserRole), nullable=False)
+    first_name = Column(String(100), nullable=True)  # Add this
+    last_name = Column(String(100), nullable=True)   # Add this
     
     # Relationships
     operator = relationship("Operator", back_populates="user", uselist=False)
