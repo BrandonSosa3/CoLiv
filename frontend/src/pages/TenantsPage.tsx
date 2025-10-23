@@ -178,7 +178,12 @@ export function TenantsPage() {
                       <User className="w-5 h-5 text-[#667eea]" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white">{tenant.email}</h3>
+                      <h3 className="font-semibold text-white">
+                        {tenant.first_name && tenant.last_name 
+                          ? `${tenant.first_name} ${tenant.last_name}`
+                          : tenant.email.split('@')[0]
+                        }
+                      </h3>
                       <p className="text-sm text-[#98989d]">
                         {tenant.property_name}
                       </p>
@@ -190,6 +195,10 @@ export function TenantsPage() {
                 </div>
 
                 <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#636366]">Email</span>
+                    <span className="text-white">{tenant.email}</span>
+                  </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[#636366]">Unit</span>
                     <span className="text-white">{tenant.unit_number}</span>
