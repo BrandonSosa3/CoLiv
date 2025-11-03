@@ -15,6 +15,7 @@ from app.routers import (
     announcements,
     preferences,
     tenant_portal,
+    tenant_auth
 )
 
 # Load environment variables
@@ -79,3 +80,4 @@ app.include_router(maintenance.router, prefix="/api/v1")
 app.include_router(announcements.router, prefix="/api/v1")
 app.include_router(preferences.router, prefix="/api/v1")
 app.include_router(tenant_portal.router, prefix="/api/v1")
+app.include_router(tenant_auth.router, prefix="/api/v1")

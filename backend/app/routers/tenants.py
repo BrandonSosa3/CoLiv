@@ -105,8 +105,9 @@ def create_tenant(
             email=tenant.email,
             first_name=tenant.first_name,  # Add this
             last_name=tenant.last_name, 
-            password_hash=get_password_hash(tenant.password if hasattr(tenant, 'password') else 'TempPassword123!'),
-            role='tenant'
+            password_hash=None,
+            role='tenant',
+            is_activated=False
         )
         db.add(new_user)
         db.flush()
