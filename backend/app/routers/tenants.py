@@ -12,7 +12,7 @@ from app.models.unit import Unit
 from app.models.property import Property
 from app.models.payment import Payment
 from app.schemas.tenant import TenantCreate, TenantUpdate, TenantResponse
-from app.utils.auth import get_current_operator, get_password_hash
+from app.utils.auth import get_current_operator
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 logger = logging.getLogger(__name__)
@@ -117,8 +117,6 @@ def create_tenant(
         db_tenant = Tenant(
             user_id=user_id,
             room_id=tenant.room_id,
-            first_name=tenant.first_name,  # Add this
-            last_name=tenant.last_name, 
             lease_start=tenant.lease_start,
             lease_end=tenant.lease_end,
             rent_amount=tenant.rent_amount,
