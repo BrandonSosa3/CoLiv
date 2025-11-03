@@ -21,7 +21,6 @@ interface FormData {
   first_name: string
   last_name: string
   email: string
-  password: string
   property_id: string
   unit_id: string
   room_id: string
@@ -204,26 +203,6 @@ export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPrope
                 <p className="text-[#ff453a] text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-[#98989d] mb-2">
-                Password *
-              </label>
-              <input
-                type="password"
-                {...register('password', { 
-                  required: 'Password is required',
-                  minLength: { value: 6, message: 'Password must be at least 6 characters' }
-                })}
-                className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white placeholder:text-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
-                placeholder="Enter password"
-              />
-              {errors.password && (
-                <p className="text-[#ff453a] text-sm mt-1">{errors.password.message}</p>
-              )}
-            </div>
-
             {/* Property Selection */}
             <div>
               <label className="block text-sm font-medium text-[#98989d] mb-2">
@@ -349,6 +328,11 @@ export function CreateTenantModal({ onClose, preSelectedRoomId, preSelectedPrope
               {errors.rent_amount && (
                 <p className="text-[#ff453a] text-sm mt-1">{errors.rent_amount.message}</p>
               )}
+            </div>
+            <div className="p-4 rounded-lg bg-[#667eea]/10 border border-[#667eea]/20">
+              <p className="text-[#667eea] text-sm">
+                ℹ️ The tenant will be able to create their own account and password using the signup option in the tenant portal.
+              </p>
             </div>
 
             {/* Actions */}
