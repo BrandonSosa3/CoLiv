@@ -48,9 +48,8 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
-    # Create access token with user ID (not email!)
     access_token = create_access_token(
-        data={"sub": str(db_user.id)},  # Use user.id, not email
+        data={"sub": db_user.email}, 
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
     )
     
@@ -81,9 +80,9 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Create access token with user ID (not email!)
+    
     access_token = create_access_token(
-        data={"sub": str(user.id)},  # Use user.id, not email
+        data={"sub": user.email},  
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
     )
     
