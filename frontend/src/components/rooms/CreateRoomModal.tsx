@@ -44,17 +44,21 @@ export function CreateRoomModal({ unitId, onClose }: CreateRoomModalProps) {
   })
 
   const onSubmit = (data: RoomFormData) => {
-    createMutation.mutate({
+    console.log('Form data before processing:', data) // Debug log
+    
+    const processedData = {
       unit_id: unitId,
       room_number: data.room_number,
-      rent_amount: data.rent_amount,
-      size_sqft: data.size_sqft,
+      rent_amount: Number(data.rent_amount),
+      size_sqft: data.size_sqft ? Number(data.size_sqft) : undefined, // Use undefined instead of null
       has_private_bath: data.has_private_bath ?? false,
-      status: "vacant", // Matches backend enum
+      status: "vacant" as const,
       room_type: data.room_type ?? "private",
-    })
+    }
+    
+    console.log('Processed data being sent:', processedData) // Debug log
+    createMutation.mutate(processedData)
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-md bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
@@ -113,7 +117,7 @@ export function CreateRoomModal({ unitId, onClose }: CreateRoomModalProps) {
 
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
-              Size (sq ft)
+              Size (sq ft) <span className="text-[#636366]">(optional)</span>
             </label>
             <input
               type="number"
