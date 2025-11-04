@@ -24,7 +24,7 @@ def get_current_tenant(
     current_user: User = Depends(get_current_user)
 ) -> Tenant:
     """Get the current tenant from the authenticated user"""
-    if current_user.role != 'tenant':
+    if current_user.role != 'TENANT':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Tenant role required."
