@@ -54,7 +54,7 @@ export function CreateRoomModal({ unitId, onClose }: CreateRoomModalProps) {
       has_private_bath: data.has_private_bath ?? false,
       status: "vacant" as const,
       room_type: data.room_type ?? "private",
-    }
+    } 
     
     console.log('Processed data being sent:', processedData) // Debug log
     createMutation.mutate(processedData)
