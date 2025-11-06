@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom' // Add Link import
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api'
@@ -89,6 +89,19 @@ export function LoginPage() {
               {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+
+          {/* Add the signup link */}
+          <div className="mt-6 text-center">
+            <p className="text-[#636366] text-sm">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-[#667eea] hover:text-[#7c8aed] font-medium">
+                Sign up
+              </Link>
+            </p>
+            <p className="text-[#636366] text-xs mt-2">
+              New tenants can create an account if added by their property manager
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
