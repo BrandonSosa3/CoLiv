@@ -10,6 +10,7 @@ from app.models.unit import Unit
 from app.models.room import Room
 from app.schemas.room import RoomCreate, RoomUpdate, RoomResponse
 from app.models.tenant import Tenant, TenantStatus
+from app.models.payment import Payment
 from app.utils.auth import get_current_operator
 
 router = APIRouter(prefix="/rooms", tags=["Rooms"])
@@ -203,14 +204,13 @@ def update_room(
 
 @router.delete("/{room_id}")
 def delete_room(
-    room_id: UUID,
+    room_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Delete a room and mark any tenants as moved out"""
+    """Delete a room with proper validation"""
     
     room = db.query(Room).filter(Room.id == room_id).first()
-    
     if not room:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -230,14 +230,36 @@ def delete_room(
             detail="You don't have access to this room"
         )
     
-    # Mark any tenants in this room as moved out (don't delete them)
-    tenants_in_room = db.query(Tenant).filter(Tenant.room_id == room_id).all()
-    for tenant in tenants_in_room:
-        tenant.status = TenantStatus.MOVED_OUT
-        tenant.room_id = None
+    # Check for active tenants
+    active_tenant = db.query(Tenant).filter(
+        Tenant.room_id == room_id,
+        Tenant.status == TenantStatus.ACTIVE
+    ).first()
     
-    # Now safe to delete the room
+    if active_tenant:
+        user = db.query(User).filter(User.id == active_tenant.user_id).first()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete room. Active tenant {user.first_name} {user.last_name} is still assigned. Please move out the tenant first."
+        )
+    
+    # Check for unpaid payments
+    unpaid_payments = db.query(Payment).filter(
+        Payment.room_id == room_id,
+        Payment.status != 'PAID'
+    ).count()
+    
+    if unpaid_payments > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete room. There are {unpaid_payments} unpaid payment(s). Please resolve all outstanding balances first."
+        )
+    
+    # Safe to delete - update payments to preserve data but remove room reference
+    db.query(Payment).filter(Payment.room_id == room_id).update({"room_id": None})
+    
+    # Delete the room
     db.delete(room)
     db.commit()
     
-    return None
+    return {"message": "Room deleted successfully"}

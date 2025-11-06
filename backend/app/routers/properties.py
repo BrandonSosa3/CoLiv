@@ -97,7 +97,7 @@ def delete_property(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Delete a property"""
+    """Delete a property with proper validation"""
     
     property = db.query(Property).filter(
         Property.id == property_id,
@@ -110,28 +110,51 @@ def delete_property(
             detail="Property not found"
         )
     
-    # Check for active tenants
+    # Get all units and rooms for this property
     units = db.query(Unit).filter(Unit.property_id == property_id).all()
     unit_ids = [unit.id for unit in units]
     
+    rooms = []
+    room_ids = []
     if unit_ids:
         rooms = db.query(Room).filter(Room.unit_id.in_(unit_ids)).all()
         room_ids = [room.id for room in rooms]
-        
-        if room_ids:
-            # Check for active or pending tenants (moved_out tenants are OK)
-            active_tenant_count = db.query(Tenant).filter(
-                Tenant.room_id.in_(room_ids),
-                Tenant.status.in_([TenantStatus.ACTIVE, TenantStatus.PENDING])
-            ).count()
-            
-            if active_tenant_count > 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Cannot delete property with {active_tenant_count} active/pending tenant(s). Please mark them as moved out first."
-                )
     
-    # Safe to delete - cascade will handle units and rooms
+    # Check for active tenants in any room
+    if room_ids:
+        active_tenants = db.query(Tenant).filter(
+            Tenant.room_id.in_(room_ids),
+            Tenant.status.in_([TenantStatus.ACTIVE, TenantStatus.PENDING])
+        ).all()
+        
+        if active_tenants:
+            tenant_names = []
+            for tenant in active_tenants:
+                user = db.query(User).filter(User.id == tenant.user_id).first()
+                tenant_names.append(f"{user.first_name} {user.last_name}")
+            
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete property. Active tenant(s) {', '.join(tenant_names)} still assigned. Please move out all tenants first."
+            )
+        
+        # Check for unpaid payments across all rooms
+        unpaid_payments = db.query(Payment).filter(
+            Payment.room_id.in_(room_ids),
+            Payment.status != 'PAID'
+        ).count()
+        
+        if unpaid_payments > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete property. There are {unpaid_payments} unpaid payment(s) across all units. Please resolve all outstanding balances first."
+            )
+    
+    # Safe to delete - update payments to preserve data but remove room references
+    if room_ids:
+        db.query(Payment).filter(Payment.room_id.in_(room_ids)).update({"room_id": None})
+    
+    # Delete the property (units and rooms will cascade delete due to FK constraints)
     db.delete(property)
     db.commit()
     
