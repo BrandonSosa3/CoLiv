@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar, Plus } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 export function PaymentsPage() {
@@ -16,6 +16,7 @@ export function PaymentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [propertyFilter, setPropertyFilter] = useState('all')
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false)
 
   const { data: properties } = useQuery({
     queryKey: ['properties'],
@@ -48,6 +49,19 @@ export function PaymentsPage() {
     },
   })
 
+  // Add the generate recurring payments mutation
+  const generateRecurringMutation = useMutation({
+    mutationFn: paymentsApi.generateRecurring,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['all-payments'] })
+      toast.success(data.message)
+      setShowGenerateDialog(false)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to generate payments')
+    },
+  })
+
   if (paymentsQuery.isLoading) {
     return <LoadingScreen message="Loading payments..." />
   }
@@ -76,6 +90,11 @@ export function PaymentsPage() {
   const pendingPayments = allPayments.filter(p => p.status === 'pending')
   const totalRevenue = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
 
+  // Calculate next month for display
+  const nextMonth = new Date()
+  nextMonth.setMonth(nextMonth.getMonth() + 1)
+  const nextMonthName = nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
   const statusIcons = {
     paid: <CheckCircle className="w-5 h-5 text-[#32d74b]" />,
     pending: <Clock className="w-5 h-5 text-[#ffd60a]" />,
@@ -92,12 +111,55 @@ export function PaymentsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Payments</h1>
-        <p className="text-[#98989d] mt-2">
-          Track rent payments across all properties
-        </p>
+      {/* Header with Generate Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Payments</h1>
+          <p className="text-[#98989d] mt-2">
+            Track rent payments across all properties
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowGenerateDialog(true)}
+          disabled={generateRecurringMutation.isPending}
+          className="flex items-center gap-2"
+        >
+          <Calendar className="w-4 h-4" />
+          {generateRecurringMutation.isPending ? 'Generating...' : 'Generate Monthly Payments'}
+        </Button>
       </div>
+
+      {/* Generate Payments Confirmation Dialog */}
+      {showGenerateDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
+            <div className="p-6 border-b border-[#2c2c2e]">
+              <h2 className="text-xl font-semibold text-white">Generate Monthly Payments</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-[#98989d] mb-6">
+                This will automatically create rent payment records for all active tenants for <strong className="text-white">{nextMonthName}</strong>.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setShowGenerateDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => generateRecurringMutation.mutate()}
+                  disabled={generateRecurringMutation.isPending}
+                >
+                  {generateRecurringMutation.isPending ? 'Generating...' : 'Generate Payments'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -138,6 +200,7 @@ export function PaymentsPage() {
         </Card>
       </div>
 
+      {/* Rest of the existing code (Filters and Payments List) remains the same... */}
       {/* Filters */}
       {allPayments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

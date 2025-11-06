@@ -20,6 +20,13 @@ export interface PaymentWithDetails extends Payment {
   room_number: string
 }
 
+export interface RecurringPaymentResponse {
+  message: string
+  generated_count: number
+  due_date: string
+  month: string
+}
+
 export const paymentsApi = {
   create: async (payment: {
     tenant_id: string
@@ -53,6 +60,11 @@ export const paymentsApi = {
       status: 'paid',
       paid_date: new Date().toISOString().split('T')[0],
     })
+    return data
+  },
+
+  generateRecurring: async (): Promise<RecurringPaymentResponse> => {
+    const { data } = await apiClient.post<RecurringPaymentResponse>('/payments/generate-recurring')
     return data
   },
 }

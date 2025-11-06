@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from app.database import get_db
 from app.models.user import User
 from app.models.payment import Payment
-from app.models.tenant import Tenant
+from app.models.tenant import Tenant, TenantStatus
 from app.models.room import Room
 from app.models.unit import Unit
 from app.models.property import Property
@@ -148,3 +150,69 @@ def update_payment(
     db.refresh(payment)
     
     return payment
+
+@router.post("/generate-recurring")
+def generate_recurring_payments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Generate monthly payments for all active tenants"""
+    
+    # Get current date and next month
+    today = date.today()
+    next_month = today + relativedelta(months=1)
+    next_month_due = date(next_month.year, next_month.month, 1)  # Due on 1st of month
+    
+    # Get all active tenants for this operator's properties
+    # Handle both room-based and unit-based tenants
+    room_based_tenants = db.query(Tenant).join(Room).join(Unit).join(Property).filter(
+        Property.operator_id == current_user.operator.id,
+        Tenant.status == TenantStatus.ACTIVE,
+        Tenant.room_id.isnot(None),  # Room-based tenants
+        Tenant.lease_start <= next_month_due,  # Lease has started
+        Tenant.lease_end >= next_month_due     # Lease hasn't ended
+    ).all()
+    
+    # For unit-based tenants (virtual rooms), we need a different query
+    # This is more complex since we need to trace through the unit ownership
+    unit_based_tenants = db.query(Tenant).join(Unit).join(Property).filter(
+        Property.operator_id == current_user.operator.id,
+        Tenant.status == TenantStatus.ACTIVE,
+        Tenant.unit_id.isnot(None),  # Unit-based tenants
+        Tenant.lease_start <= next_month_due,
+        Tenant.lease_end >= next_month_due
+    ).all()
+    
+    all_tenants = room_based_tenants + unit_based_tenants
+    generated_count = 0
+    
+    for tenant in all_tenants:
+        # Check if payment already exists for next month
+        existing_payment = db.query(Payment).filter(
+            Payment.tenant_id == tenant.id,
+            Payment.due_date >= date(next_month.year, next_month.month, 1),
+            Payment.due_date < date(next_month.year, next_month.month, 1) + relativedelta(months=1)
+        ).first()
+        
+        if not existing_payment:
+            # Create new payment
+            new_payment = Payment(
+                tenant_id=tenant.id,
+                room_id=tenant.room_id,  # May be None for unit-level tenants
+                amount=tenant.rent_amount,
+                due_date=next_month_due,
+                status='PENDING',
+                payment_method='manual',
+                late_fee=0.00
+            )
+            db.add(new_payment)
+            generated_count += 1
+    
+    db.commit()
+    
+    return {
+        "message": f"Generated {generated_count} recurring payments for {next_month_due.strftime('%B %Y')}",
+        "generated_count": generated_count,
+        "due_date": next_month_due.isoformat(),
+        "month": next_month_due.strftime('%B %Y')
+    }
