@@ -98,7 +98,7 @@ def get_my_payments(
     """Get current tenant's payment history with auto-overdue updates"""
     
     from datetime import datetime
-    import pytz
+    from zoneinfo import ZoneInfo
     
     # Get all payments for this tenant
     payments = db.query(Payment).filter(
@@ -106,7 +106,7 @@ def get_my_payments(
     ).all()
     
     # Get current PST date
-    pst = pytz.timezone('America/Los_Angeles')
+    pst = ZoneInfo("America/Los_Angeles")
     today_pst = datetime.now(pst).date()
     
     # Auto-update overdue payments
