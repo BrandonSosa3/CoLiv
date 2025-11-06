@@ -36,6 +36,23 @@ def create_unit(
     # Create unit
     unit = Unit(**unit_data.model_dump())
     db.add(unit)
+    db.flush()  # Get the unit ID without committing
+    
+    # If this is a whole unit rental, create a virtual room
+    if unit_data.rental_type == "whole_unit":
+        from app.models.room import Room  # Import Room model
+        
+        virtual_room = Room(
+            unit_id=unit.id,
+            room_number="Whole Unit",
+            room_type="private",
+            rent_amount=0,  # Will be set during tenant assignment
+            size_sqft=unit_data.square_feet,  # Inherit from unit
+            has_private_bath=True,  # Whole unit has all amenities
+            status="vacant"
+        )
+        db.add(virtual_room)
+    
     db.commit()
     db.refresh(unit)
     
