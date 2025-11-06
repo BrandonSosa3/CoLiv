@@ -47,7 +47,7 @@ function App() {
             style: {
               background: '#1c1c1e',
               border: '1px solid #2c2c2e',
-              color: '#ffffff',
+              color: '#fffffe',
             },
           }}
         />

@@ -9,7 +9,7 @@ export const authApi = {
     
     const { data } = await apiClient.post<AuthResponse>('/auth/login', formData, {
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/x-www-form-urlencoded', 
       },
     })
     return data
