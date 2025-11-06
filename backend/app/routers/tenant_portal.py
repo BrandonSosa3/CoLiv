@@ -104,12 +104,16 @@ def get_my_payments(
     
     # Auto-update overdue payments
     today = date.today()
+    updated_count = 0
+    
     for payment in payments:
         if payment.status == 'PENDING' and payment.due_date < today:
             payment.status = 'OVERDUE'
+            updated_count += 1
     
-    # Commit the status updates
-    db.commit()
+    if updated_count > 0:
+        db.commit()
+        print(f"Updated {updated_count} payments to OVERDUE")
     
     # Get updated payments sorted by due date
     payments = db.query(Payment).filter(
@@ -121,7 +125,7 @@ def get_my_payments(
         "amount": str(payment.amount),
         "due_date": payment.due_date.isoformat(),
         "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
-        "status": payment.status.lower(),  # Ensure lowercase for frontend consistency
+        "status": payment.status.lower(),  # Convert to lowercase for frontend
         "payment_method": payment.payment_method,
         "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
         "created_at": payment.created_at.isoformat()
