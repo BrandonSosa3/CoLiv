@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import date
 
 from app.database import get_db
 from app.models.user import User
@@ -94,23 +95,37 @@ def get_my_payments(
     tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
-    """Get current tenant's payment history"""
+    """Get current tenant's payment history with auto-overdue updates"""
+    
+    # Get all payments for this tenant
+    payments = db.query(Payment).filter(
+        Payment.tenant_id == tenant.id
+    ).all()
+    
+    # Auto-update overdue payments
+    today = date.today()
+    for payment in payments:
+        if payment.status == 'PENDING' and payment.due_date < today:
+            payment.status = 'OVERDUE'
+    
+    # Commit the status updates
+    db.commit()
+    
+    # Get updated payments sorted by due date
     payments = db.query(Payment).filter(
         Payment.tenant_id == tenant.id
     ).order_by(Payment.due_date.desc()).all()
     
-    return [
-        {
-            "id": str(payment.id),
-            "amount": str(payment.amount),
-            "due_date": payment.due_date.isoformat(),
-            "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
-            "status": payment.status,
-            "payment_method": payment.payment_method,
-            "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
-        }
-        for payment in payments
-    ]
+    return [{
+        "id": str(payment.id),
+        "amount": str(payment.amount),
+        "due_date": payment.due_date.isoformat(),
+        "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
+        "status": payment.status.lower(),  # Ensure lowercase for frontend consistency
+        "payment_method": payment.payment_method,
+        "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
+        "created_at": payment.created_at.isoformat()
+    } for payment in payments]
 
 
 @router.get("/maintenance")
@@ -198,26 +213,3 @@ def get_my_announcements(
         }
         for announcement in announcements
     ]
-
-@router.get("/payments")
-def get_my_payments(
-    tenant: Tenant = Depends(get_current_tenant),
-    db: Session = Depends(get_db)
-):
-    """Get current tenant's payment history"""
-    
-    payments = db.query(Payment).filter(
-        Payment.tenant_id == tenant.id
-    ).order_by(Payment.due_date.desc()).all()
-    
-    return [{
-        "id": str(payment.id),
-        "amount": str(payment.amount),
-        "due_date": payment.due_date.isoformat(),
-        "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
-        "status": payment.status,
-        "payment_method": payment.payment_method,
-        "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
-        "created_at": payment.created_at.isoformat()
-    } for payment in payments]
-
