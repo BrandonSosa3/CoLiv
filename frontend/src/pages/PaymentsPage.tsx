@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar, Plus } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar} from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 export function PaymentsPage() {
