@@ -152,67 +152,59 @@ def update_payment(
     return payment
 
 @router.post("/generate-recurring")
+@router.post("/generate-recurring")
 def generate_recurring_payments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Generate monthly payments for all active tenants"""
+    """Generate monthly payments for all active tenants for their entire lease period"""
     
-    # Get current date and next month
-    today = date.today()
-    next_month = today + relativedelta(months=1)
-    next_month_due = date(next_month.year, next_month.month, 1)  # Due on 1st of month
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
     
-    # Get all active tenants for this operator's properties
-    # Handle both room-based and unit-based tenants
-    room_based_tenants = db.query(Tenant).join(Room).join(Unit).join(Property).filter(
+    # Get all active tenants for this operator's properties (all have room_id with virtual room approach)
+    active_tenants = db.query(Tenant).join(Room).join(Unit).join(Property).filter(
         Property.operator_id == current_user.operator.id,
         Tenant.status == TenantStatus.ACTIVE,
-        Tenant.room_id.isnot(None),  # Room-based tenants
-        Tenant.lease_start <= next_month_due,  # Lease has started
-        Tenant.lease_end >= next_month_due     # Lease hasn't ended
+        Tenant.room_id.isnot(None)  # All tenants have room_id (virtual or real)
     ).all()
     
-    # For unit-based tenants (virtual rooms), we need a different query
-    # This is more complex since we need to trace through the unit ownership
-    unit_based_tenants = db.query(Tenant).join(Unit).join(Property).filter(
-        Property.operator_id == current_user.operator.id,
-        Tenant.status == TenantStatus.ACTIVE,
-        Tenant.unit_id.isnot(None),  # Unit-based tenants
-        Tenant.lease_start <= next_month_due,
-        Tenant.lease_end >= next_month_due
-    ).all()
-    
-    all_tenants = room_based_tenants + unit_based_tenants
     generated_count = 0
     
-    for tenant in all_tenants:
-        # Check if payment already exists for next month
-        existing_payment = db.query(Payment).filter(
-            Payment.tenant_id == tenant.id,
-            Payment.due_date >= date(next_month.year, next_month.month, 1),
-            Payment.due_date < date(next_month.year, next_month.month, 1) + relativedelta(months=1)
-        ).first()
+    for tenant in active_tenants:
+        # Generate payments for entire lease period
+        current_month = tenant.lease_start.replace(day=1)  # Start from first of lease start month
+        lease_end = tenant.lease_end
         
-        if not existing_payment:
-            # Create new payment
-            new_payment = Payment(
-                tenant_id=tenant.id,
-                room_id=tenant.room_id,  # May be None for unit-level tenants
-                amount=tenant.rent_amount,
-                due_date=next_month_due,
-                status='PENDING',
-                payment_method='manual',
-                late_fee=0.00
-            )
-            db.add(new_payment)
-            generated_count += 1
+        while current_month <= lease_end:
+            # Check if payment already exists for this month
+            next_month = current_month + relativedelta(months=1)
+            existing_payment = db.query(Payment).filter(
+                Payment.tenant_id == tenant.id,
+                Payment.due_date >= current_month,
+                Payment.due_date < next_month
+            ).first()
+            
+            if not existing_payment:
+                # Create payment due on 1st of each month
+                new_payment = Payment(
+                    tenant_id=tenant.id,
+                    room_id=tenant.room_id,  # Works for both virtual and real rooms
+                    amount=tenant.rent_amount,
+                    due_date=current_month,
+                    status='PENDING',
+                    payment_method='manual',
+                    late_fee=0.00
+                )
+                db.add(new_payment)
+                generated_count += 1
+            
+            # Move to next month
+            current_month = next_month
     
     db.commit()
     
     return {
-        "message": f"Generated {generated_count} recurring payments for {next_month_due.strftime('%B %Y')}",
-        "generated_count": generated_count,
-        "due_date": next_month_due.isoformat(),
-        "month": next_month_due.strftime('%B %Y')
+        "message": f"Generated {generated_count} payments for all active lease periods",
+        "generated_count": generated_count
     }
