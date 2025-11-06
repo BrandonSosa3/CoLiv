@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/Button'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar} from 'lucide-react'
+import { DollarSign, Calendar, ChevronRight, User } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import { TenantPaymentSummary } from '@/types'
+import { TenantPaymentModal } from '@/components/tenants/TenantPaymentModal'
 
 export function PaymentsPage() {
   const queryClient = useQueryClient()
@@ -17,6 +19,7 @@ export function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [propertyFilter, setPropertyFilter] = useState('all')
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
+  const [selectedTenant, setSelectedTenant] = useState<TenantPaymentSummary | null>(null)
 
   const { data: properties } = useQuery({
     queryKey: ['properties'],
@@ -34,6 +37,18 @@ export function PaymentsPage() {
     enabled: !!properties,
   })
 
+  const generateRecurringMutation = useMutation({
+    mutationFn: paymentsApi.generateRecurring,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['all-payments'] })
+      toast.success(data.message)
+      setShowGenerateDialog(false)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to generate payments')
+    },
+  })
+
   const markAsPaidMutation = useMutation({
     mutationFn: (paymentId: string) =>
       paymentsApi.update(paymentId, {
@@ -49,74 +64,95 @@ export function PaymentsPage() {
     },
   })
 
-  // Add the generate recurring payments mutation
-  const generateRecurringMutation = useMutation({
-    mutationFn: paymentsApi.generateRecurring,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['all-payments'] })
-      toast.success(data.message)
-      setShowGenerateDialog(false)
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Failed to generate payments')
-    },
-  })
-
   if (paymentsQuery.isLoading) {
     return <LoadingScreen message="Loading payments..." />
   }
 
   const allPayments = paymentsQuery.data || []
 
-  // Apply filters
-  const filteredPayments = allPayments.filter((payment) => {
-    if (statusFilter !== 'all' && payment.status !== statusFilter) return false
-    if (propertyFilter !== 'all' && payment.property_name !== propertyFilter) return false
+  // Group payments by tenant
+  const tenantSummaries: TenantPaymentSummary[] = []
+  const tenantMap = new Map()
+
+  allPayments.forEach(payment => {
+    const key = payment.tenant_email
+    if (!tenantMap.has(key)) {
+      tenantMap.set(key, {
+        tenant: {
+          id: payment.tenant_id,
+          name: `${payment.tenant_first_name || ''} ${payment.tenant_last_name || ''}`.trim() || payment.tenant_email,
+          email: payment.tenant_email,
+          property: payment.property_name,
+          unit: payment.unit_number,
+          room: payment.room_number
+        },
+        payments: {
+          total: 0,
+          paid: 0,
+          pending: 0,
+          overdue: 0,
+          totalAmount: 0,
+          paidAmount: 0
+        },
+        allPayments: []
+      })
+    }
+
+    const summary = tenantMap.get(key)
+    summary.allPayments.push(payment)
+    summary.payments.total++
+    summary.payments.totalAmount += Number(payment.amount)
+
+    if (payment.status === 'paid') {
+      summary.payments.paid++
+      summary.payments.paidAmount += Number(payment.amount)
+    } else if (payment.status === 'pending') {
+      summary.payments.pending++
+    } else if (payment.status === 'overdue') {
+      summary.payments.overdue++
+    }
+
+    // Find next due payment
+    if (payment.status === 'pending' && (!summary.payments.nextDueDate || payment.due_date < summary.payments.nextDueDate)) {
+      summary.payments.nextDueDate = payment.due_date
+      summary.payments.nextDueAmount = Number(payment.amount)
+    }
+  })
+
+  tenantMap.forEach(summary => tenantSummaries.push(summary))
+
+  // Apply filters to tenant summaries
+  const filteredTenants = tenantSummaries.filter(summary => {
+    if (statusFilter === 'has-pending' && summary.payments.pending === 0) return false
+    if (statusFilter === 'has-overdue' && summary.payments.overdue === 0) return false
+    if (statusFilter === 'all-paid' && summary.payments.pending > 0) return false
+    if (propertyFilter !== 'all' && summary.tenant.property !== propertyFilter) return false
 
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase()
       return (
-        payment.tenant_email.toLowerCase().includes(searchLower) ||
-        payment.property_name.toLowerCase().includes(searchLower) ||
-        payment.unit_number.toLowerCase().includes(searchLower) ||
-        payment.room_number.toLowerCase().includes(searchLower)
+        summary.tenant.name.toLowerCase().includes(searchLower) ||
+        summary.tenant.email.toLowerCase().includes(searchLower) ||
+        summary.tenant.property.toLowerCase().includes(searchLower)
       )
     }
 
     return true
   })
 
-  const paidPayments = allPayments.filter(p => p.status === 'paid')
-  const pendingPayments = allPayments.filter(p => p.status === 'pending')
-  const totalRevenue = paidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-
-  // Calculate next month for display
-  const nextMonth = new Date()
-  nextMonth.setMonth(nextMonth.getMonth() + 1)
-  const nextMonthName = nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-
-  const statusIcons = {
-    paid: <CheckCircle className="w-5 h-5 text-[#32d74b]" />,
-    pending: <Clock className="w-5 h-5 text-[#ffd60a]" />,
-    overdue: <AlertCircle className="w-5 h-5 text-[#ff453a]" />,
-    failed: <AlertCircle className="w-5 h-5 text-[#ff453a]" />,
-  }
-
-  const statusColors = {
-    paid: 'bg-[#32d74b]/10 text-[#32d74b] border-[#32d74b]/20',
-    pending: 'bg-[#ffd60a]/10 text-[#ffd60a] border-[#ffd60a]/20',
-    overdue: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
-    failed: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
-  }
+  const totalPayments = tenantSummaries.reduce((sum, t) => sum + t.payments.total, 0)
+  const totalPaid = tenantSummaries.reduce((sum, t) => sum + t.payments.paid, 0)
+  const totalPending = tenantSummaries.reduce((sum, t) => sum + t.payments.pending, 0)
+  const totalRevenue = tenantSummaries.reduce((sum, t) => sum + t.payments.paidAmount, 0)
 
   return (
     <div className="space-y-8">
-      {/* Header with Generate Button */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Payments</h1>
           <p className="text-[#98989d] mt-2">
-            Track rent payments across all properties
+            Track rent payments by tenant across all properties
           </p>
         </div>
         <Button
@@ -129,7 +165,7 @@ export function PaymentsPage() {
         </Button>
       </div>
 
-      {/* Generate Payments Confirmation Dialog */}
+      {/* Generate Dialog - same as before */}
       {showGenerateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
@@ -138,7 +174,7 @@ export function PaymentsPage() {
             </div>
             <div className="p-6">
               <p className="text-[#98989d] mb-6">
-                This will automatically create rent payment records for all active tenants for <strong className="text-white">{nextMonthName}</strong>.
+                This will create payment records for all active tenants for their entire lease period.
               </p>
               <div className="flex gap-3">
                 <Button
@@ -166,27 +202,21 @@ export function PaymentsPage() {
         <Card>
           <CardContent>
             <p className="text-sm text-[#98989d]">Total Payments</p>
-            <p className="text-2xl font-bold text-white mt-1">
-              {allPayments.length}
-            </p>
+            <p className="text-2xl font-bold text-white mt-1">{totalPayments}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent>
             <p className="text-sm text-[#98989d]">Paid</p>
-            <p className="text-2xl font-bold text-white mt-1">
-              {paidPayments.length}
-            </p>
+            <p className="text-2xl font-bold text-white mt-1">{totalPaid}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent>
             <p className="text-sm text-[#98989d]">Pending</p>
-            <p className="text-2xl font-bold text-white mt-1">
-              {pendingPayments.length}
-            </p>
+            <p className="text-2xl font-bold text-white mt-1">{totalPending}</p>
           </CardContent>
         </Card>
 
@@ -200,27 +230,25 @@ export function PaymentsPage() {
         </Card>
       </div>
 
-      {/* Rest of the existing code (Filters and Payments List) remains the same... */}
       {/* Filters */}
-      {allPayments.length > 0 && (
+      {tenantSummaries.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search by tenant, property, or location..."
+              placeholder="Search by tenant name, email, or property..."
             />
           </div>
           <FilterDropdown
-            label="Status"
+            label="Payment Status"
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
-              { value: 'all', label: 'All Statuses' },
-              { value: 'paid', label: 'Paid' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'overdue', label: 'Overdue' },
-              { value: 'failed', label: 'Failed' },
+              { value: 'all', label: 'All Tenants' },
+              { value: 'has-pending', label: 'Has Pending Payments' },
+              { value: 'has-overdue', label: 'Has Overdue Payments' },
+              { value: 'all-paid', label: 'All Payments Current' },
             ]}
           />
           <FilterDropdown
@@ -235,121 +263,73 @@ export function PaymentsPage() {
         </div>
       )}
 
-      {/* Payments List */}
-      {allPayments.length === 0 ? (
+      {/* Tenant List */}
+      {tenantSummaries.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20 flex items-center justify-center mb-4">
               <DollarSign className="w-8 h-8 text-[#667eea]" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              No payments yet
-            </h3>
-            <p className="text-[#98989d]">
-              Payment records will appear here once tenants are assigned
-            </p>
-          </CardContent>
-        </Card>
-      ) : filteredPayments.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-[#98989d] mb-4">
-              No payments found matching your filters
-            </p>
-            <button
-              onClick={() => {
-                setSearchQuery('')
-                setStatusFilter('all')
-                setPropertyFilter('all')
-              }}
-              className="text-[#667eea] hover:underline"
-            >
-              Clear filters
-            </button>
+            <h3 className="text-lg font-semibold text-white mb-2">No payments yet</h3>
+            <p className="text-[#98989d]">Payment records will appear here once tenants are assigned</p>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">
-                {filteredPayments.length} {filteredPayments.length === 1 ? 'Payment' : 'Payments'}
-              </h2>
-              {(searchQuery || statusFilter !== 'all' || propertyFilter !== 'all') && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('')
-                    setStatusFilter('all')
-                    setPropertyFilter('all')
-                  }}
-                  className="text-sm text-[#667eea] hover:underline"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
+            <h2 className="text-xl font-semibold text-white">
+              {filteredTenants.length} {filteredTenants.length === 1 ? 'Tenant' : 'Tenants'}
+            </h2>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredPayments.map((payment) => (
+            <div className="space-y-3">
+              {filteredTenants.map((summary) => (
                 <div
-                  key={payment.id}
-                  className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e] hover:border-[#3a3a3c] transition-colors"
+                  key={summary.tenant.id}
+                  className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e] hover:border-[#3a3a3c] transition-colors cursor-pointer"
+                  onClick={() => setSelectedTenant(summary)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
-                          {statusIcons[payment.status]}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
+                        <User className="w-5 h-5 text-[#667eea]" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">{summary.tenant.name}</h3>
+                        <p className="text-sm text-[#98989d]">
+                          {summary.tenant.property} - Unit {summary.tenant.unit}, Room {summary.tenant.room}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="text-center">
+                          <p className="text-[#32d74b] font-semibold">{summary.payments.paid}</p>
+                          <p className="text-[#636366]">Paid</p>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-white">{payment.tenant_email}</h3>
+                        <div className="text-center">
+                          <p className="text-[#ffd60a] font-semibold">{summary.payments.pending}</p>
+                          <p className="text-[#636366]">Pending</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[#ff453a] font-semibold">{summary.payments.overdue}</p>
+                          <p className="text-[#636366]">Overdue</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="font-semibold text-white">
+                          {formatCurrency(summary.payments.paidAmount)} / {formatCurrency(summary.payments.totalAmount)}
+                        </p>
+                        {summary.payments.nextDueDate && summary.payments.nextDueAmount !== undefined && (
                           <p className="text-sm text-[#98989d]">
-                            {payment.property_name} - Unit {payment.unit_number}, Room {payment.room_number}
+                            Next: {formatCurrency(summary.payments.nextDueAmount)} due {formatDate(summary.payments.nextDueDate)}
                           </p>
-                        </div>
+                        )}
                       </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                        <div>
-                          <p className="text-[#636366]">Amount</p>
-                          <p className="font-semibold text-white">
-                            {formatCurrency(Number(payment.amount))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[#636366]">Due Date</p>
-                          <p className="text-[#98989d]">{formatDate(payment.due_date)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[#636366]">Method</p>
-                          <p className="text-[#98989d] capitalize">{payment.payment_method}</p>
-                        </div>
-                        <div>
-                          <p className="text-[#636366]">Status</p>
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs border ${statusColors[payment.status]}`}>
-                            {payment.status}
-                          </span>
-                        </div>
-                        <div className="flex items-end">
-                          {payment.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              onClick={() => markAsPaidMutation.mutate(payment.id)}
-                              disabled={markAsPaidMutation.isPending}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Mark Paid
-                            </Button>
-                          )}
-                          {payment.status === 'paid' && payment.created_at && (
-                            <div>
-                              <p className="text-[#636366] text-xs">Paid on</p>
-                              <p className="text-[#98989d] text-sm">{formatDate(payment.created_at)}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      
+                      <ChevronRight className="w-5 h-5 text-[#636366]" />
                     </div>
                   </div>
                 </div>
@@ -357,6 +337,15 @@ export function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Tenant Detail Modal - we'll create this next */}
+      {selectedTenant && (
+        <TenantPaymentModal
+          tenant={selectedTenant}
+          onClose={() => setSelectedTenant(null)}
+          onPaymentUpdate={markAsPaidMutation.mutate}
+        />
       )}
     </div>
   )

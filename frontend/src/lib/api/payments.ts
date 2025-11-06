@@ -15,6 +15,8 @@ export interface Payment {
 
 export interface PaymentWithDetails extends Payment {
   tenant_email: string
+  tenant_first_name?: string | null
+  tenant_last_name?: string | null
   property_name: string
   unit_number: string
   room_number: string

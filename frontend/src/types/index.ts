@@ -124,3 +124,31 @@ export interface RoomWithTenant extends Room {
     status: string
   }
 }
+
+export interface TenantPaymentSummary {
+  tenant: {
+    id: string
+    name: string
+    email: string
+    property: string
+    unit: string
+    room: string
+  }
+  payments: {
+    total: number
+    paid: number
+    pending: number
+    overdue: number
+    totalAmount: number
+    paidAmount: number
+    nextDueDate?: string
+    nextDueAmount?: number
+  }
+  allPayments: Array<{
+    id: string
+    amount: string
+    due_date: string
+    paid_date: string | null
+    status: 'pending' | 'paid' | 'overdue' | 'failed'
+  }>
+}

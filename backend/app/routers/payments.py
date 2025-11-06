@@ -106,6 +106,8 @@ def get_payments_by_property(
                 "due_date": payment.due_date.isoformat(),
                 "created_at": payment.created_at.isoformat(),
                 "tenant_email": user.email,
+                "tenant_first_name": user.first_name,
+                "tenant_last_name": user.last_name,
                 "room_number": room.room_number,
                 "unit_number": unit.unit_number,
                 "property_name": property.name,
