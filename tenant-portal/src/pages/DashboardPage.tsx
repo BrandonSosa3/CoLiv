@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { tenantApi, paymentsApi } from '@/lib/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { Home, DollarSign, Calendar, CheckCircle } from 'lucide-react'
+import { Home, DollarSign, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
+import { formatCurrency, formatDate } from '@/lib/utils'
 
 export function DashboardPage() {
   const { data: lease, isLoading: leaseLoading } = useQuery({
@@ -23,6 +24,8 @@ export function DashboardPage() {
 
   const pendingPayments = payments?.filter((p: any) => p.status === 'pending') || []
   const paidPayments = payments?.filter((p: any) => p.status === 'paid') || []
+  const overduePayments = payments?.filter((p: any) => p.status === 'overdue') || []
+  const nextPayment = pendingPayments?.sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]
 
   return (
     <div className="space-y-8">
@@ -129,6 +132,58 @@ export function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+        {overduePayments.length > 0 ? (
+          <Card className="border-[#ff453a]/20">
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#ff453a]/20">
+                  <AlertCircle className="w-5 h-5 text-[#ff453a]" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-[#ff453a]">Overdue Payment</h3>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {overduePayments.length} payment{overduePayments.length > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-sm text-[#98989d]">Contact property manager</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : nextPayment ? (
+          <Card className="border-[#ffd60a]/20">
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#ffd60a]/20">
+                  <Calendar className="w-5 h-5 text-[#ffd60a]" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-white">Next Payment Due</h3>
+                  <p className="text-xl font-bold text-[#ffd60a] mt-1">
+                    {formatCurrency(Number(nextPayment.amount))}
+                  </p>
+                  <p className="text-sm text-[#98989d]">
+                    Due {formatDate(nextPayment.due_date)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-[#32d74b]/20">
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[#32d74b]/20">
+                  <CheckCircle className="w-5 h-5 text-[#32d74b]" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-[#32d74b]">All Current</h3>
+                  <p className="text-sm text-[#98989d] mt-1">No payments due</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
