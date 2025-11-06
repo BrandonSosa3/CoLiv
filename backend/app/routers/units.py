@@ -219,7 +219,10 @@ def delete_unit(
         )
     
     # Safe to delete - update payments to preserve data but remove room references
-    db.query(Payment).filter(Payment.room_id.in_(room_ids)).update({"room_id": None})
+    db.query(Tenant).filter(
+    Tenant.room_id.in_(room_ids),
+    Tenant.status == TenantStatus.MOVED_OUT
+    ).update({"room_id": None})
     
     # Delete the unit (rooms will cascade delete due to FK constraint)
     db.delete(unit)

@@ -152,7 +152,10 @@ def delete_property(
     
     # Safe to delete - update payments to preserve data but remove room references
     if room_ids:
-        db.query(Payment).filter(Payment.room_id.in_(room_ids)).update({"room_id": None})
+        db.query(Tenant).filter(
+            Tenant.room_id.in_(room_ids),
+            Tenant.status == TenantStatus.MOVED_OUT
+        ).update({"room_id": None})
     
     # Delete the property (units and rooms will cascade delete due to FK constraints)
     db.delete(property)

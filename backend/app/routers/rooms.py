@@ -258,6 +258,12 @@ def delete_room(
     # Safe to delete - update payments to preserve data but remove room reference
     db.query(Payment).filter(Payment.room_id == room_id).update({"room_id": None})
     
+    # 2. Update moved out tenants to remove room reference (NEW)
+    db.query(Tenant).filter(
+        Tenant.room_id == room_id,
+        Tenant.status == TenantStatus.MOVED_OUT
+    ).update({"room_id": None})
+    
     # Delete the room
     db.delete(room)
     db.commit()
