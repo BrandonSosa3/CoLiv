@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # The start command will be handled by Railway
-CMD ["bash", "start.sh"]
+CMD ["bash", "start.sh"] 
