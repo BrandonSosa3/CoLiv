@@ -27,6 +27,7 @@ export interface Unit {
   bathrooms: number
   square_feet?: number
   furnished: boolean
+  rental_type: string
 }
 
 export interface Room {

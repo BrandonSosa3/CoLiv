@@ -14,6 +14,7 @@ interface UnitFormData {
   bathrooms: string
   square_feet: string
   furnished: boolean
+  rental_type: string  // Add this field
 }
 
 interface CreateUnitModalProps {
@@ -28,6 +29,7 @@ export function CreateUnitModal({ propertyId, onClose }: CreateUnitModalProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<UnitFormData>({
     defaultValues: {
       furnished: false,
+      rental_type: "individual_rooms",  // Add this default
     },
   })
 
@@ -51,6 +53,7 @@ export function CreateUnitModal({ propertyId, onClose }: CreateUnitModalProps) {
         bathrooms: Number(data.bathrooms),
         square_feet: data.square_feet ? Number(data.square_feet) : undefined,
         furnished: data.furnished,
+        rental_type: data.rental_type,  // Add this field
       })
     },
     onSuccess: (data) => {
@@ -123,6 +126,26 @@ export function CreateUnitModal({ propertyId, onClose }: CreateUnitModalProps) {
               error={errors.bathrooms?.message}
               {...register('bathrooms', { required: 'Bathrooms is required' })}
             />
+          </div>
+
+          {/* Add rental type selection */}
+          <div>
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
+              Rental Type *
+            </label>
+            <select
+              {...register('rental_type', { required: 'Rental type is required' })}
+              className="w-full px-4 py-2.5 rounded-lg bg-[#141414] border border-[#2c2c2e] text-white focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent"
+            >
+              <option value="individual_rooms">Individual Rooms - Rent out rooms within this unit</option>
+              <option value="whole_unit">Whole Unit - Rent entire unit to one tenant</option>
+            </select>
+            {errors.rental_type && (
+              <p className="mt-1 text-sm text-[#ff453a]">{errors.rental_type.message}</p>
+            )}
+            <p className="text-[#636366] text-sm mt-2">
+              Choose how you want to rent out this unit
+            </p>
           </div>
 
           <Input
