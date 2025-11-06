@@ -154,7 +154,6 @@ def update_payment(
     return payment
 
 @router.post("/generate-recurring")
-@router.post("/generate-recurring")
 def generate_recurring_payments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
@@ -164,18 +163,18 @@ def generate_recurring_payments(
     from datetime import date
     from dateutil.relativedelta import relativedelta
     
-    # Get all active tenants for this operator's properties (all have room_id with virtual room approach)
+    # Get all active tenants for this operator's properties
     active_tenants = db.query(Tenant).join(Room).join(Unit).join(Property).filter(
         Property.operator_id == current_user.operator.id,
         Tenant.status == TenantStatus.ACTIVE,
-        Tenant.room_id.isnot(None)  # All tenants have room_id (virtual or real)
+        Tenant.room_id.isnot(None)
     ).all()
     
     generated_count = 0
     
     for tenant in active_tenants:
-        # Generate payments for entire lease period
-        current_month = tenant.lease_start.replace(day=1)  # Start from first of lease start month
+        # Generate payments for entire lease period, due on 1st of each month
+        current_month = date(tenant.lease_start.year, tenant.lease_start.month, 1)  # Start from 1st of lease start month
         lease_end = tenant.lease_end
         
         while current_month <= lease_end:
@@ -191,9 +190,9 @@ def generate_recurring_payments(
                 # Create payment due on 1st of each month
                 new_payment = Payment(
                     tenant_id=tenant.id,
-                    room_id=tenant.room_id,  # Works for both virtual and real rooms
+                    room_id=tenant.room_id,
                     amount=tenant.rent_amount,
-                    due_date=current_month,
+                    due_date=current_month,  # Always 1st of the month
                     status='PENDING',
                     payment_method='manual',
                     late_fee=0.00
@@ -201,7 +200,7 @@ def generate_recurring_payments(
                 db.add(new_payment)
                 generated_count += 1
             
-            # Move to next month
+            # Move to 1st of next month
             current_month = next_month
     
     db.commit()

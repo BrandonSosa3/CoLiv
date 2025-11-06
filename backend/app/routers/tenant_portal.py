@@ -97,23 +97,24 @@ def get_my_payments(
 ):
     """Get current tenant's payment history with auto-overdue updates"""
     
+    from datetime import datetime
+    import pytz
+    
     # Get all payments for this tenant
     payments = db.query(Payment).filter(
         Payment.tenant_id == tenant.id
     ).all()
     
+    # Get current PST date
+    pst = pytz.timezone('America/Los_Angeles')
+    today_pst = datetime.now(pst).date()
+    
     # Auto-update overdue payments
-    today = date.today()
-    updated_count = 0
-    
     for payment in payments:
-        if payment.status == 'PENDING' and payment.due_date < today:
+        if payment.status == 'PENDING' and payment.due_date < today_pst:
             payment.status = 'OVERDUE'
-            updated_count += 1
     
-    if updated_count > 0:
-        db.commit()
-        print(f"Updated {updated_count} payments to OVERDUE")
+    db.commit()
     
     # Get updated payments sorted by due date
     payments = db.query(Payment).filter(
@@ -125,7 +126,7 @@ def get_my_payments(
         "amount": str(payment.amount),
         "due_date": payment.due_date.isoformat(),
         "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
-        "status": payment.status.lower(),  # Convert to lowercase for frontend
+        "status": payment.status.lower(),
         "payment_method": payment.payment_method,
         "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
         "created_at": payment.created_at.isoformat()
