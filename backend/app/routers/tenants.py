@@ -126,7 +126,9 @@ def create_tenant(
         db.add(db_tenant)
     
     # Update room status to occupied
-    room.status = "occupied"
+    if room:
+        room.status = "occupied"
+        room.rent_amount = tenant.rent_amount
     
     db.flush()
     
