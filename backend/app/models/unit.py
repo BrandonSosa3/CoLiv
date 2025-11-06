@@ -12,9 +12,10 @@ class Unit(BaseModel):
     unit_number = Column(String(20), nullable=False)
     floor = Column(Integer)
     bedrooms = Column(Integer, nullable=False)
-    bathrooms = Column(Integer, nullable=False)  # Store as int, will use decimals in schema
+    bathrooms = Column(Integer, nullable=False)
     square_feet = Column(Integer)
     furnished = Column(Boolean, default=False)
+    rental_type = Column(String(20), nullable=False, default="individual_rooms")  # Add this line
     
     # Relationships
     property = relationship("Property", back_populates="units")
