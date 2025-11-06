@@ -199,3 +199,25 @@ def get_my_announcements(
         for announcement in announcements
     ]
 
+@router.get("/payments")
+def get_my_payments(
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    """Get current tenant's payment history"""
+    
+    payments = db.query(Payment).filter(
+        Payment.tenant_id == tenant.id
+    ).order_by(Payment.due_date.desc()).all()
+    
+    return [{
+        "id": str(payment.id),
+        "amount": str(payment.amount),
+        "due_date": payment.due_date.isoformat(),
+        "paid_date": payment.paid_date.isoformat() if payment.paid_date else None,
+        "status": payment.status,
+        "payment_method": payment.payment_method,
+        "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
+        "created_at": payment.created_at.isoformat()
+    } for payment in payments]
+

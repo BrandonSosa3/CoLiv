@@ -9,6 +9,7 @@ import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PreferencesPage } from './pages/PreferencesPage'
 import { TenantLayout } from './components/TenantLayout'
+import { PaymentsPage } from './pages/PaymentsPage'
 
 const queryClient = new QueryClient()
 
@@ -41,6 +42,7 @@ function App() {
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
           </Route>
         </Routes>
         <Toaster 

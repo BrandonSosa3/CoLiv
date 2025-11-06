@@ -1,5 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Home, Wrench, Megaphone, User, LogOut, Sparkles } from 'lucide-react'
+import { DollarSign } from 'lucide-react' // Add this import
+
 
 export function TenantLayout() {
   const navigate = useNavigate()
@@ -12,6 +14,7 @@ export function TenantLayout() {
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/payments', icon: DollarSign, label: 'Payments' }, // Add this line
     { path: '/maintenance', icon: Wrench, label: 'Maintenance' },
     { path: '/announcements', icon: Megaphone, label: 'Announcements' },
     { path: '/preferences', icon: Sparkles, label: 'Roommate Match' },

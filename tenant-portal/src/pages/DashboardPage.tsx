@@ -15,6 +15,8 @@ export function DashboardPage() {
     queryFn: paymentsApi.getMyPayments,
   })
 
+
+
   if (leaseLoading || paymentsLoading) {
     return <LoadingScreen message="Loading your dashboard..." />
   }
