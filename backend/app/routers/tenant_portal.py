@@ -218,3 +218,104 @@ def get_my_announcements(
         }
         for announcement in announcements
     ]
+# Add to app/routers/tenant_portal.py
+# Add to app/routers/tenant_portal.py
+@router.get("/documents")
+def get_my_documents(
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    """Get documents available to current tenant"""
+    
+    # Get tenant's room and property info
+    room = db.query(Room).filter(Room.id == tenant.room_id).first()
+    if not room:
+        return []
+    
+    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+    property_id = unit.property_id
+    
+    # Get documents assigned to this tenant OR visible to all tenants in property
+    documents = db.query(Document).filter(
+        db.or_(
+            Document.tenant_id == tenant.id,  # Tenant-specific documents
+            db.and_(
+                Document.property_id == property_id,
+                Document.visible_to_all_tenants == True  # Property-wide documents
+            )
+        )
+    ).order_by(Document.created_at.desc()).all()
+    
+    return [{
+        "id": str(document.id),
+        "title": document.title,
+        "document_type": document.document_type,
+        "description": document.description,
+        "filename": document.filename,
+        "file_url": document.file_url,
+        "file_size": document.file_size,
+        "created_at": document.created_at.isoformat(),
+        "is_tenant_specific": document.tenant_id == tenant.id
+    } for document in documents]
+
+@router.post("/documents/upload")
+async def upload_tenant_document(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    document_type: str = Form(...),
+    description: Optional[str] = Form(None),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    """Upload a document as a tenant"""
+    
+    # Validate file size (10MB limit for tenants)
+    max_size = 10 * 1024 * 1024
+    content = await file.read()
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size must be less than 10MB"
+        )
+    
+    # Get tenant's property
+    room = db.query(Room).filter(Room.id == tenant.room_id).first()
+    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+    property_id = unit.property_id
+    
+    try:
+        # Upload file to storage
+        file.file.seek(0)  # Reset file pointer
+        file_info = await file_storage.upload_file(file, folder="tenant-uploads")
+        
+        # Create document record
+        document = Document(
+            property_id=property_id,
+            tenant_id=tenant.id,
+            document_type=document_type,
+            title=title,
+            description=description,
+            filename=file_info["filename"],
+            file_url=file_info["file_url"],
+            file_size=file_info["file_size"],
+            mime_type=file_info["mime_type"],
+            visible_to_all_tenants=False  # Tenant uploads are private by default
+        )
+        
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+        
+        return {
+            "id": str(document.id),
+            "title": document.title,
+            "document_type": document.document_type,
+            "filename": document.filename,
+            "created_at": document.created_at.isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload document: {str(e)}"
+        )

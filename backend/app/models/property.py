@@ -23,3 +23,4 @@ class Property(BaseModel):
     units = relationship("Unit", back_populates="property", cascade="all, delete-orphan")
     announcements = relationship("Announcement", back_populates="property", cascade="all, delete-orphan")
     maintenance_requests = relationship("MaintenanceRequest", back_populates="property", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="property")

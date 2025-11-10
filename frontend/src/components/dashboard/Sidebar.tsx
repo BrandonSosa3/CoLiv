@@ -6,6 +6,7 @@ import {
   DollarSign,
   Wrench,
   Megaphone,
+  FileText,
   TrendingUp,
   LogOut,
 } from 'lucide-react'
@@ -24,6 +25,7 @@ export function Sidebar() {
     { path: '/dashboard/properties', icon: Building2, label: 'Properties' },
     { path: '/dashboard/tenants', icon: Users, label: 'Tenants' },
     { path: '/dashboard/payments', icon: DollarSign, label: 'Payments' },
+    { path: '/dashboard/documents', icon: FileText, label: 'Documents' },
     { path: '/dashboard/maintenance', icon: Wrench, label: 'Maintenance' },
     { path: '/dashboard/announcements', icon: Megaphone, label: 'Announcements' },
     { path: '/dashboard/analytics', icon: TrendingUp, label: 'Analytics' },

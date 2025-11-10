@@ -29,3 +29,4 @@ class Tenant(BaseModel):
     room = relationship("Room", foreign_keys=[room_id])
     payments = relationship("Payment", back_populates="tenant", cascade="all, delete-orphan")
     preference = relationship("TenantPreference", back_populates="tenant", uselist=False, cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="tenant")

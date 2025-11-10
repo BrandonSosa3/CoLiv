@@ -10,6 +10,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { PreferencesPage } from './pages/PreferencesPage'
 import { TenantLayout } from './components/TenantLayout'
 import { PaymentsPage } from './pages/PaymentsPage'
+import { DocumentsPage } from './pages/DocumentsPage'
 
 const queryClient = new QueryClient()
 
@@ -43,6 +44,7 @@ function App() {
             <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/documents" element={<DocumentsPage />} />
           </Route>
         </Routes>
         <Toaster 

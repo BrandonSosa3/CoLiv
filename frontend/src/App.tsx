@@ -13,6 +13,7 @@ import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { DocumentsPage } from './pages/DocumentsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function App() {
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="/documents" element={<DocumentsPage />} />
           </Route>
         </Routes>
         <Toaster 
