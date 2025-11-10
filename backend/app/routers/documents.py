@@ -30,50 +30,60 @@ async def upload_document(
 ):
     """Upload a document with flexible assignment"""
     
-    # Validate that at least property_id is provided
-    if not property_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Property must be specified"
-        )
-    
-    # Verify property ownership
-    property = db.query(Property).filter(
-        Property.id == property_id,
-        Property.operator_id == current_user.operator.id
-    ).first()
-    
-    if not property:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Property not found or not authorized"
-        )
-    
-    # If tenant_id is provided, verify tenant belongs to operator's properties
-    if tenant_id:
-        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-        if not tenant:
+    try:
+        print(f"DEBUG: Upload started - file: {file.filename}, property_id: {property_id}")
+        
+        # Validate that at least property_id is provided
+        if not property_id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Property must be specified"
             )
         
-        # Verify tenant belongs to operator's property
-        if tenant.room_id:
-            room = db.query(Room).filter(Room.id == tenant.room_id).first()
-            unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
-            tenant_property = db.query(Property).filter(Property.id == unit.property_id).first()
-            
-            if tenant_property.operator_id != current_user.operator.id:
+        print(f"DEBUG: Property validation passed")
+        
+        # Verify property ownership
+        property = db.query(Property).filter(
+            Property.id == property_id,
+            Property.operator_id == current_user.operator.id
+        ).first()
+        
+        if not property:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Property not found or not authorized"
+            )
+        
+        print(f"DEBUG: Property ownership verified")
+        
+        # If tenant_id is provided, verify tenant belongs to operator's properties
+        if tenant_id:
+            print(f"DEBUG: Verifying tenant_id: {tenant_id}")
+            tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+            if not tenant:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to assign documents to this tenant"
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Tenant not found"
                 )
-    
-    try:
+            
+            # Verify tenant belongs to operator's property
+            if tenant.room_id:
+                room = db.query(Room).filter(Room.id == tenant.room_id).first()
+                unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+                tenant_property = db.query(Property).filter(Property.id == unit.property_id).first()
+                
+                if tenant_property.operator_id != current_user.operator.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Not authorized to assign documents to this tenant"
+                    )
+            print(f"DEBUG: Tenant verification passed")
+        
+        print(f"DEBUG: About to upload file to storage")
         # Upload file to storage
         file_info = await file_storage.upload_file(file, folder="documents")
         
+        print(f"DEBUG: File uploaded successfully, creating document record")
         # Create document record
         document = Document(
             property_id=property_id,
@@ -88,13 +98,18 @@ async def upload_document(
             visible_to_all_tenants=visible_to_all_tenants
         )
         
+        print(f"DEBUG: Adding document to database")
         db.add(document)
         db.commit()
         db.refresh(document)
         
+        print(f"DEBUG: Upload completed successfully")
         return document
         
     except Exception as e:
+        print(f"DEBUG: Upload failed with error: {str(e)}")
+        import traceback
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload document: {str(e)}"
