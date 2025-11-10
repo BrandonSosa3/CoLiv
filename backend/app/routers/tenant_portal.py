@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import date
+from typing import Optional
+from app.models.document import Document  # Add this
+from app.services.file_storage import file_storage  # Add this
 
 from app.database import get_db
 from app.models.user import User
