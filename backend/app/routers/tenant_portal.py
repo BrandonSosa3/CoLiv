@@ -222,8 +222,6 @@ def get_my_announcements(
         }
         for announcement in announcements
     ]
-# Add to app/routers/tenant_portal.py
-# Add to app/routers/tenant_portal.py
 @router.get("/documents")
 def get_my_documents(
     tenant: Tenant = Depends(get_current_tenant),
@@ -239,13 +237,19 @@ def get_my_documents(
     unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
     property_id = unit.property_id
     
+    print(f"DEBUG TENANT: tenant_id={tenant.id}, property_id={property_id}")
+    
     # Get documents assigned to this tenant OR visible to all tenants in property
     documents = db.query(Document).filter(
-        or_(  # ✅ Correct - use imported or_
+        or_(
             Document.tenant_id == tenant.id,
             (Document.property_id == property_id) & (Document.visible_to_all_tenants == True)
         )
     ).order_by(Document.created_at.desc()).all()
+    
+    print(f"DEBUG TENANT: Found {len(documents)} documents")
+    for doc in documents:
+        print(f"DEBUG TENANT: Doc - tenant_id={doc.tenant_id}, property_id={doc.property_id}, visible_to_all={doc.visible_to_all_tenants}, title={doc.title}")
     
     return [{
         "id": str(document.id),
