@@ -49,7 +49,7 @@ function App() {
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
           </Route>
         </Routes>
         <Toaster 
