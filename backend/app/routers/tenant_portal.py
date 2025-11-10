@@ -5,6 +5,7 @@ from datetime import date
 from typing import Optional
 from app.models.document import Document  # Add this
 from app.services.file_storage import file_storage  # Add this
+from sqlalchemy import or_
 
 from app.database import get_db
 from app.models.user import User
@@ -240,12 +241,9 @@ def get_my_documents(
     
     # Get documents assigned to this tenant OR visible to all tenants in property
     documents = db.query(Document).filter(
-        db.or_(
-            Document.tenant_id == tenant.id,  # Tenant-specific documents
-            db.and_(
-                Document.property_id == property_id,
-                Document.visible_to_all_tenants == True  # Property-wide documents
-            )
+        or_(  # ✅ Correct - use imported or_
+            Document.tenant_id == tenant.id,
+            (Document.property_id == property_id) & (Document.visible_to_all_tenants == True)
         )
     ).order_by(Document.created_at.desc()).all()
     
