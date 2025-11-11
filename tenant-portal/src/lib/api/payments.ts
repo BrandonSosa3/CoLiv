@@ -9,6 +9,8 @@ export interface TenantPayment {
   payment_method: string
   late_fee: string
   created_at: string
+  payment_type?: string
+  description?: string | null
 }
 
 export const paymentsApi = {

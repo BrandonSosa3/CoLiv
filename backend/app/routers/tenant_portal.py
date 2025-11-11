@@ -133,7 +133,9 @@ def get_my_payments(
         "status": payment.status.lower(),
         "payment_method": payment.payment_method,
         "late_fee": str(payment.late_fee) if payment.late_fee else "0.00",
-        "created_at": payment.created_at.isoformat()
+        "created_at": payment.created_at.isoformat(),
+        "payment_type": payment.payment_type if payment.payment_type else "rent",
+        "description": payment.description
     } for payment in payments]
 
 
