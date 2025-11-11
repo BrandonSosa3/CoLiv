@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, Calendar, FileText, Tag } from 'lucide-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { toast } from 'sonner'
+import { toast } from 'sonner';
 
 interface Tenant {
   id: string;
@@ -14,7 +14,6 @@ interface Tenant {
 interface CustomPaymentRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  propertyId?: string;
 }
 
 const PAYMENT_TYPES = [
@@ -31,7 +30,6 @@ const PAYMENT_TYPES = [
 export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps> = ({
   isOpen,
   onClose,
-  propertyId,
 }) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -43,14 +41,11 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
     room_id: null,
   });
 
-  // Fetch tenants for the property
+  // Fetch all tenants for the operator
   const { data: tenants, isLoading: loadingTenants } = useQuery<Tenant[]>({
-    queryKey: ['tenants', propertyId],
+    queryKey: ['all-tenants'],
     queryFn: async () => {
-      const endpoint = propertyId 
-        ? `/tenants/property/${propertyId}`
-        : '/tenants/all';
-      const response = await apiClient.get(endpoint);
+      const response = await apiClient.get('/tenants/all/tenants');
       return response.data;
     },
     enabled: isOpen,
@@ -72,7 +67,7 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
     },
     onSuccess: () => {
       toast.success('Payment request created successfully');
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['all-payments'] });
       onClose();
       resetForm();
     },
@@ -125,19 +120,19 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#1c1c1e] rounded-xl border border-[#2c2c2e] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-[#2c2c2e]">
           <div>
             <h2 className="text-2xl font-bold text-white">Create Payment Request</h2>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-[#98989d] mt-1">
               Request a custom payment from a tenant
             </p>
           </div>
           <button
             onClick={handleClose}
             disabled={createPaymentMutation.isPending}
-            className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+            className="text-[#98989d] hover:text-white transition-colors disabled:opacity-50"
           >
             <X className="w-6 h-6" />
           </button>
@@ -147,16 +142,18 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Tenant Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Tenant <span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
+              Tenant <span className="text-[#ff453a]">*</span>
             </label>
             {loadingTenants ? (
-              <div className="text-gray-400 text-sm">Loading tenants...</div>
+              <div className="text-[#98989d] text-sm">Loading tenants...</div>
+            ) : tenants && tenants.length === 0 ? (
+              <div className="text-[#ff453a] text-sm">No active tenants found</div>
             ) : (
               <select
                 value={formData.tenant_id}
                 onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
                 required
               >
                 <option value="">Select a tenant</option>
@@ -174,14 +171,14 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
 
           {/* Payment Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
               <Tag className="w-4 h-4 inline mr-2" />
-              Payment Type <span className="text-red-400">*</span>
+              Payment Type <span className="text-[#ff453a]">*</span>
             </label>
             <select
               value={formData.payment_type}
               onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
               required
             >
               {PAYMENT_TYPES.map((type) => (
@@ -194,9 +191,9 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
 
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
               <DollarSign className="w-4 h-4 inline mr-2" />
-              Amount <span className="text-red-400">*</span>
+              Amount <span className="text-[#ff453a]">*</span>
             </label>
             <input
               type="number"
@@ -205,41 +202,41 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
               placeholder="0.00"
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
               required
             />
           </div>
 
           {/* Due Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
               <Calendar className="w-4 h-4 inline mr-2" />
-              Due Date <span className="text-red-400">*</span>
+              Due Date <span className="text-[#ff453a]">*</span>
             </label>
             <input
               type="date"
               value={formData.due_date}
               onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
               required
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
               <FileText className="w-4 h-4 inline mr-2" />
-              Description <span className="text-red-400">*</span>
+              Description <span className="text-[#ff453a]">*</span>
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Provide details about this payment request..."
               rows={4}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea] resize-none"
               required
             />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-[#636366] mt-1">
               This description will be visible to the tenant
             </p>
           </div>
@@ -250,14 +247,14 @@ export const CustomPaymentRequestModal: React.FC<CustomPaymentRequestModalProps>
               type="button"
               onClick={handleClose}
               disabled={createPaymentMutation.isPending}
-              className="px-6 py-2.5 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+              className="px-6 py-2.5 text-[#98989d] hover:text-white transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createPaymentMutation.isPending}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5568d3] hover:to-[#6b3fa0] text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {createPaymentMutation.isPending ? (
                 <>

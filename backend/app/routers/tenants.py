@@ -406,3 +406,48 @@ def delete_tenant(
     
     return {"message": "Tenant marked as moved out successfully"}
     return {"message": "Tenant removed successfully"}
+
+
+@router.get("/all/tenants")
+def get_all_tenants(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Get all tenants across all properties for the current operator"""
+    
+    # Get all properties for this operator
+    properties = db.query(Property).filter(
+        Property.operator_id == current_user.operator.id
+    ).all()
+    
+    if not properties:
+        return []
+    
+    property_ids = [p.id for p in properties]
+    
+    # Get all units for these properties
+    units = db.query(Unit).filter(Unit.property_id.in_(property_ids)).all()
+    unit_ids = [u.id for u in units]
+    
+    # Get all rooms for these units
+    rooms = db.query(Room).filter(Room.unit_id.in_(unit_ids)).all()
+    room_ids = [r.id for r in rooms]
+    
+    # Get all tenants for these rooms
+    tenants = db.query(Tenant).filter(Tenant.room_id.in_(room_ids)).all()
+    
+    # Build response with context
+    result = []
+    for tenant in tenants:
+        user = db.query(User).filter(User.id == tenant.user_id).first()
+        room = db.query(Room).filter(Room.id == tenant.room_id).first()
+        unit = db.query(Unit).filter(Unit.id == room.unit_id).first() if room else None
+        
+        result.append({
+            "id": str(tenant.id),
+            "user_email": user.email if user else None,
+            "room_number": room.room_number if room else None,
+            "unit_number": unit.unit_number if unit else None,
+        })
+    
+    return result
