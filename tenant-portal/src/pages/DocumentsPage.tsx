@@ -10,7 +10,7 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { Upload, FileText, Download, Calendar, Building, User } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils'
-
+import { useEffect } from 'react'
 
 export function DocumentsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -20,6 +20,16 @@ export function DocumentsPage() {
     queryKey: ['my-documents'],
     queryFn: documentsApi.getMyDocuments,
   })
+
+  // Add debug logging here
+  useEffect(() => {
+    if (documents) {
+      console.log('DEBUG: All documents received:', documents)
+      documents.forEach(doc => {
+        console.log(`DEBUG: Document - id: "${doc.id}", file_url: "${doc.file_url}", title: "${doc.title}"`)
+      })
+    }
+  }, [documents])
 
   if (isLoading) {
     return <LoadingScreen message="Loading documents..." />
@@ -62,6 +72,8 @@ export function DocumentsPage() {
       toast.error('Failed to download document')
     }
   }
+
+  // ... rest of your component
   
   return (
     <div className="space-y-6">
@@ -209,7 +221,7 @@ export function DocumentsPage() {
                         
                         <Button
                           size="sm"
-                          onClick={() => handleDownload(document.file_url, document.filename)}
+                          onClick={() => handleDownload(document.id, document.filename)}
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download
