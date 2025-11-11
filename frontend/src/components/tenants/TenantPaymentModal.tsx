@@ -1,9 +1,8 @@
-// Create this as a new component - TenantPaymentModal.tsx
 import { useState, ReactElement } from 'react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
-import { X, CheckCircle, Clock, AlertCircle, DollarSign } from 'lucide-react'
+import { X, CheckCircle, Clock, AlertCircle, DollarSign, FileText, Tag } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { TenantPaymentSummary } from '@/types'
 
@@ -41,6 +40,35 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
     pending: 'bg-[#ffd60a]/10 text-[#ffd60a] border-[#ffd60a]/20',
     overdue: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
     failed: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
+  }
+
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'rent': 'Rent',
+      'insurance': 'Insurance',
+      'service_fee': 'Service Fee',
+      'utilities': 'Utilities',
+      'maintenance': 'Maintenance',
+      'parking': 'Parking Fee',
+      'pet_fee': 'Pet Fee',
+      'late_fee': 'Late Fee',
+      'custom': 'Custom',
+    }
+    return labels[type] || type
+  }
+
+  const getPaymentTypeBadge = (type: string) => {
+    const isRent = type === 'rent'
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
+        isRent 
+          ? 'bg-[#0a84ff]/10 text-[#0a84ff] border-[#0a84ff]/20'
+          : 'bg-[#bf5af2]/10 text-[#bf5af2] border-[#bf5af2]/20'
+      }`}>
+        <Tag className="w-3 h-3" />
+        {getPaymentTypeLabel(type)}
+      </span>
+    )
   }
 
   return (
@@ -152,22 +180,31 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
                   key={payment.id}
                   className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e]"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
                       <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
                         {statusIcons[payment.status as PaymentStatus]}
                       </div>
-                      <div>
-                        <p className="font-semibold text-white">
-                          {formatCurrency(Number(payment.amount))}
-                        </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-white">
+                            {formatCurrency(Number(payment.amount))}
+                          </p>
+                          {payment.payment_type && getPaymentTypeBadge(payment.payment_type)}
+                        </div>
                         <p className="text-sm text-[#98989d]">
                           Due: {formatDate(payment.due_date)}
                         </p>
+                        {payment.description && payment.payment_type !== 'rent' && (
+                          <div className="mt-2 flex items-start gap-2">
+                            <FileText className="w-4 h-4 text-[#98989d] mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-[#98989d]">{payment.description}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 ml-4">
                       <span className={`px-3 py-1 rounded-full text-sm border ${statusColors[payment.status as PaymentStatus]}`}>
                         {payment.status}
                       </span>
@@ -182,10 +219,10 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
                         </Button>
                       )}
 
-                      {payment.status === 'paid' && payment.paid_date && (
+                      {payment.status === 'paid' && payment.payment_date && (
                         <div className="text-right">
                           <p className="text-sm text-[#98989d]">Paid on</p>
-                          <p className="text-sm text-white">{formatDate(payment.paid_date)}</p>
+                          <p className="text-sm text-white">{formatDate(payment.payment_date)}</p>
                         </div>
                       )}
                     </div>
