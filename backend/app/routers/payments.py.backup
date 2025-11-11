@@ -105,8 +105,6 @@ def get_payments_by_property(
                 "status": payment.status,
                 "due_date": payment.due_date.isoformat(),
                 "created_at": payment.created_at.isoformat(),
-                "payment_type": payment.payment_type if payment.payment_type else "rent",
-                "description": payment.description,
                 "tenant_email": user.email,
                 "tenant_first_name": user.first_name,
                 "tenant_last_name": user.last_name,
@@ -116,6 +114,102 @@ def get_payments_by_property(
             })
     
     return payments
+
+
+@router.put("/{payment_id}", response_model=PaymentResponse)
+def update_payment(
+    payment_id: str,
+    payment_update: PaymentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Update a payment (e.g., mark as paid)"""
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    
+    if not payment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found"
+        )
+    
+    # Verify ownership
+    tenant = db.query(Tenant).filter(Tenant.id == payment.tenant_id).first()
+    room = db.query(Room).filter(Room.id == tenant.room_id).first()
+    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+    property = db.query(Property).filter(Property.id == unit.property_id).first()
+    
+    if property.operator_id != current_user.operator.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized"
+        )
+    
+    # Update fields
+    for key, value in payment_update.model_dump(exclude_unset=True).items():
+        setattr(payment, key, value)
+    
+    db.commit()
+    db.refresh(payment)
+    
+    return payment
+
+@router.post("/generate-recurring")
+def generate_recurring_payments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Generate monthly payments for all active tenants for their entire lease period"""
+    
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    
+    # Get all active tenants for this operator's properties
+    active_tenants = db.query(Tenant).join(Room).join(Unit).join(Property).filter(
+        Property.operator_id == current_user.operator.id,
+        Tenant.status == TenantStatus.ACTIVE,
+        Tenant.room_id.isnot(None)
+    ).all()
+    
+    generated_count = 0
+    
+    for tenant in active_tenants:
+        # Generate payments for entire lease period, due on 1st of each month
+        current_month = date(tenant.lease_start.year, tenant.lease_start.month, 1)  # Start from 1st of lease start month
+        lease_end = tenant.lease_end
+        
+        while current_month <= lease_end:
+            # Check if payment already exists for this month
+            next_month = current_month + relativedelta(months=1)
+            existing_payment = db.query(Payment).filter(
+                Payment.tenant_id == tenant.id,
+                Payment.due_date >= current_month,
+                Payment.due_date < next_month
+            ).first()
+            
+            if not existing_payment:
+                # Create payment due on 1st of each month
+                new_payment = Payment(
+                    tenant_id=tenant.id,
+                    room_id=tenant.room_id,
+                    amount=tenant.rent_amount,
+                    due_date=current_month,  # Always 1st of the month
+                    status='PENDING',
+                    payment_method='manual',
+                    late_fee=0.00
+                )
+                db.add(new_payment)
+                generated_count += 1
+            
+            # Move to 1st of next month
+            current_month = next_month
+    
+    db.commit()
+    
+    return {
+        "message": f"Generated {generated_count} payments for all active lease periods",
+        "generated_count": generated_count
+    }
+
 
 
 @router.post("/custom-request", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
