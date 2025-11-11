@@ -58,4 +58,9 @@ export const documentsApi = {
   deleteDocument: async (documentId: string): Promise<void> => {
     await apiClient.delete(`/documents/${documentId}`)
   },
+
+  downloadDocument: async (documentId: string): Promise<string> => {
+    const { data } = await apiClient.get<{ download_url: string }>(`/documents/download/${documentId}`)
+    return data.download_url
+  },
 }

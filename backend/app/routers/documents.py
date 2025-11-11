@@ -266,3 +266,29 @@ def debug_env():
         "R2_SECRET_ACCESS_KEY": "***" if os.getenv("R2_SECRET_ACCESS_KEY") else "NOT_SET",
         "R2_BUCKET_NAME": os.getenv("R2_BUCKET_NAME", "NOT_SET"),
     }
+
+@router.get("/download/{document_id}")
+def download_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Generate a secure download URL for a document"""
+    
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Verify ownership through property
+    property = db.query(Property).filter(
+        Property.id == document.property_id,
+        Property.operator_id == current_user.operator.id
+    ).first()
+    
+    if not property:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Generate signed URL (expires in 1 hour)
+    download_url = file_storage.generate_download_url(document.file_url)
+    
+    return {"download_url": download_url}

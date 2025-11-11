@@ -5,18 +5,12 @@ import uuid
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 
-# Update app/services/file_storage.py with debug info
 class FileStorageService:
     def __init__(self):
         self.endpoint_url = os.getenv("R2_ENDPOINT_URL")
         self.access_key = os.getenv("R2_ACCESS_KEY_ID") 
         self.secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
         self.bucket_name = os.getenv("R2_BUCKET_NAME")
-        
-        print(f"DEBUG: R2_ENDPOINT_URL = {self.endpoint_url}")
-        print(f"DEBUG: R2_ACCESS_KEY_ID = {self.access_key}")
-        print(f"DEBUG: R2_BUCKET_NAME = {self.bucket_name}")
-        print(f"DEBUG: R2_SECRET_ACCESS_KEY = {'***' if self.secret_key else 'None'}")
         
         if not all([self.endpoint_url, self.access_key, self.secret_key, self.bucket_name]):
             print("WARNING: R2 credentials not configured, using mock storage")
@@ -32,9 +26,8 @@ class FileStorageService:
             )
     
     async def upload_file(self, file: UploadFile, folder: str = "documents") -> dict:
-        """Upload file to R2"""
+        """Upload file to R2 (private bucket)"""
         if not self.s3_client:
-            # Fallback to mock for development
             return await self._mock_upload(file, folder)
             
         try:
@@ -46,7 +39,7 @@ class FileStorageService:
             # Read file content
             content = await file.read()
             
-            # Upload to R2
+            # Upload to R2 (private - no public access needed)
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=key,
@@ -54,13 +47,12 @@ class FileStorageService:
                 ContentType=file.content_type or 'application/octet-stream'
             )
             
-            # Generate public URL (adjust based on your R2 custom domain)
-            file_url = f"https://pub-{self.bucket_name}.r2.dev/{key}"
-            
+            # Store the key instead of public URL
+            # We'll generate signed URLs on-demand for downloads
             return {
                 "filename": file.filename,
                 "unique_filename": unique_filename,
-                "file_url": file_url,
+                "file_url": key,  # Store the S3 key, not a public URL
                 "file_size": len(content),
                 "mime_type": file.content_type,
                 "key": key
@@ -71,10 +63,25 @@ class FileStorageService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
     
+    def generate_download_url(self, key: str, expires_in: int = 3600) -> str:
+        """Generate a signed URL for secure file download (1 hour expiry by default)"""
+        if not self.s3_client:
+            return f"https://mock-storage.com/{key}"  # Mock fallback
+            
+        try:
+            signed_url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': key},
+                ExpiresIn=expires_in  # URL expires in 1 hour
+            )
+            return signed_url
+        except ClientError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate download URL: {str(e)}")
+    
     def delete_file(self, key: str) -> bool:
         """Delete file from R2"""
         if not self.s3_client:
-            return True  # Mock deletion
+            return True
             
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
@@ -86,14 +93,15 @@ class FileStorageService:
         """Mock upload for development"""
         content = await file.read()
         unique_filename = f"{uuid.uuid4()}.{file.filename.split('.')[-1]}" if '.' in file.filename else str(uuid.uuid4())
+        key = f"{folder}/{unique_filename}"
         
         return {
             "filename": file.filename,
             "unique_filename": unique_filename,
-            "file_url": f"https://mock-storage.com/{folder}/{unique_filename}",
+            "file_url": key,  # Store key for consistency
             "file_size": len(content),
             "mime_type": file.content_type,
-            "key": f"{folder}/{unique_filename}"
+            "key": key
         }
 
 # Create singleton instance

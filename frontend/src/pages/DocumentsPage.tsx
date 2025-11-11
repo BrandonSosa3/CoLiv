@@ -69,13 +69,19 @@ export function DocumentsPage() {
     return true
   })
 
-  const handleDownload = (fileUrl: string, filename: string) => {
-    const link = document.createElement('a')
-    link.href = fileUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownload = async (documentId: string, filename: string) => {
+    try {
+      const downloadUrl = await documentsApi.downloadDocument(documentId)
+      
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      toast.error('Failed to download document')
+    }
   }
 
   const handleDelete = (documentId: string) => {
@@ -282,7 +288,7 @@ export function DocumentsPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleDownload(document.file_url, document.filename)}
+                        onClick={() => handleDownload(document.id, document.filename)}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
