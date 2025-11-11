@@ -324,3 +324,35 @@ async def upload_tenant_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload document: {str(e)}"
         )
+
+@router.get("/documents/{document_id}/download")
+def download_my_document(
+    document_id: str,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: Session = Depends(get_db)
+):
+    """Generate a secure download URL for tenant's accessible documents"""
+    
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Get tenant's property info
+    room = db.query(Room).filter(Room.id == tenant.room_id).first()
+    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+    property_id = unit.property_id
+    
+    # Verify tenant can access this document
+    can_access = (
+        document.tenant_id == tenant.id or  # Document assigned to tenant
+        (document.property_id == property_id and document.visible_to_all_tenants)  # Property-wide document
+    )
+    
+    if not can_access:
+        raise HTTPException(status_code=403, detail="Not authorized to download this document")
+    
+    # Generate signed URL
+    from app.services.file_storage import file_storage
+    download_url = file_storage.generate_download_url(document.file_url)
+    
+    return {"download_url": download_url}

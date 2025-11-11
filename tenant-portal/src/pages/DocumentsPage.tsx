@@ -1,6 +1,7 @@
 // Create src/pages/DocumentsPage.tsx in tenant-portal
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { documentsApi } from '@/lib/api/documents'
 import { TenantDocumentUploadModal } from '@/components/documents/TenantDocumentUploadModal'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -9,6 +10,7 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { Upload, FileText, Download, Calendar, Building, User } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils'
+
 
 export function DocumentsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -43,15 +45,22 @@ export function DocumentsPage() {
   const myDocuments = filteredDocuments.filter(doc => doc.is_tenant_specific)
   const sharedDocuments = filteredDocuments.filter(doc => !doc.is_tenant_specific)
 
-  const handleDownload = (fileUrl: string, filename: string) => {
-    const link = document.createElement('a')
-    link.href = fileUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownload = async (documentId: string, filename: string) => {
+    try {
+      const response = await documentsApi.downloadDocument(documentId)
+      const { download_url } = response
+      
+      const link = document.createElement('a')
+      link.href = download_url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      toast.error('Failed to download document')
+    }
   }
-
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -262,7 +271,7 @@ export function DocumentsPage() {
                         
                         <Button
                           size="sm"
-                          onClick={() => handleDownload(document.file_url, document.filename)}
+                          onClick={() => handleDownload(document.id, document.filename)}
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download

@@ -37,4 +37,9 @@ export const documentsApi = {
     })
     return response
   },
+
+  downloadDocument: async (documentId: string): Promise<{download_url: string}> => {
+    const { data } = await apiClient.get(`/tenants/me/documents/${documentId}/download`)
+    return data
+  },
 }
