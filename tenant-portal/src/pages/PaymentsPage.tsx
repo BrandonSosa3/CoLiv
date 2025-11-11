@@ -1,9 +1,8 @@
-// Create src/pages/PaymentsPage.tsx
 import { useQuery } from '@tanstack/react-query'
 import { paymentsApi } from '@/lib/api/payments'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar, FileText, Tag } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 export function PaymentsPage() {
@@ -42,6 +41,35 @@ export function PaymentsPage() {
     pending: 'bg-[#ffd60a]/10 text-[#ffd60a] border-[#ffd60a]/20',
     overdue: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
     failed: 'bg-[#ff453a]/10 text-[#ff453a] border-[#ff453a]/20',
+  }
+
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'rent': 'Rent',
+      'insurance': 'Insurance',
+      'service_fee': 'Service Fee',
+      'utilities': 'Utilities',
+      'maintenance': 'Maintenance',
+      'parking': 'Parking Fee',
+      'pet_fee': 'Pet Fee',
+      'late_fee': 'Late Fee',
+      'custom': 'Custom',
+    }
+    return labels[type] || type
+  }
+
+  const getPaymentTypeBadge = (type: string) => {
+    const isRent = type === 'rent'
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
+        isRent 
+          ? 'bg-[#0a84ff]/10 text-[#0a84ff] border-[#0a84ff]/20'
+          : 'bg-[#bf5af2]/10 text-[#bf5af2] border-[#bf5af2]/20'
+      }`}>
+        <Tag className="w-3 h-3" />
+        {getPaymentTypeLabel(type)}
+      </span>
+    )
   }
 
   return (
@@ -84,6 +112,11 @@ export function PaymentsPage() {
                 <p className="text-[#98989d]">
                   Due on {formatDate(nextPayment.due_date)}
                 </p>
+                {nextPayment.payment_type && nextPayment.payment_type !== 'rent' && (
+                  <div className="mt-2">
+                    {getPaymentTypeBadge(nextPayment.payment_type)}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -168,15 +201,18 @@ export function PaymentsPage() {
                   key={payment.id}
                   className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e]"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
                       <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
                         {statusIcons[payment.status]}
                       </div>
-                      <div>
-                        <p className="font-semibold text-white">
-                          {formatCurrency(Number(payment.amount))}
-                        </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-white">
+                            {formatCurrency(Number(payment.amount))}
+                          </p>
+                          {payment.payment_type && getPaymentTypeBadge(payment.payment_type)}
+                        </div>
                         <p className="text-sm text-[#98989d]">
                           Due: {formatDate(payment.due_date)}
                         </p>
@@ -184,6 +220,12 @@ export function PaymentsPage() {
                           <p className="text-sm text-[#32d74b]">
                             Paid: {formatDate(payment.paid_date)}
                           </p>
+                        )}
+                        {payment.description && payment.payment_type !== 'rent' && (
+                          <div className="mt-2 flex items-start gap-2 p-2 bg-[#1c1c1e] rounded border border-[#2c2c2e]">
+                            <FileText className="w-4 h-4 text-[#98989d] mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-[#98989d]">{payment.description}</p>
+                          </div>
                         )}
                       </div>
                     </div>
