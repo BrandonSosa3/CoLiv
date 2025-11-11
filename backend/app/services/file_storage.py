@@ -5,6 +5,7 @@ import uuid
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 
+# Update app/services/file_storage.py with debug info
 class FileStorageService:
     def __init__(self):
         self.endpoint_url = os.getenv("R2_ENDPOINT_URL")
@@ -12,10 +13,16 @@ class FileStorageService:
         self.secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
         self.bucket_name = os.getenv("R2_BUCKET_NAME")
         
+        print(f"DEBUG: R2_ENDPOINT_URL = {self.endpoint_url}")
+        print(f"DEBUG: R2_ACCESS_KEY_ID = {self.access_key}")
+        print(f"DEBUG: R2_BUCKET_NAME = {self.bucket_name}")
+        print(f"DEBUG: R2_SECRET_ACCESS_KEY = {'***' if self.secret_key else 'None'}")
+        
         if not all([self.endpoint_url, self.access_key, self.secret_key, self.bucket_name]):
             print("WARNING: R2 credentials not configured, using mock storage")
             self.s3_client = None
         else:
+            print("SUCCESS: R2 credentials found, initializing real storage")
             self.s3_client = boto3.client(
                 's3',
                 endpoint_url=self.endpoint_url,
