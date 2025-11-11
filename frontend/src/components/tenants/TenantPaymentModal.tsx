@@ -219,10 +219,10 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
                         </Button>
                       )}
 
-                      {payment.status === 'paid' && payment.payment_date && (
+                      {payment.status === 'paid' && payment.paid_date && (
                         <div className="text-right">
                           <p className="text-sm text-[#98989d]">Paid on</p>
-                          <p className="text-sm text-white">{formatDate(payment.payment_date)}</p>
+                          <p className="text-sm text-white">{formatDate(payment.paid_date)}</p>
                         </div>
                       )}
                     </div>

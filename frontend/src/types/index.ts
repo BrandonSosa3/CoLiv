@@ -150,5 +150,7 @@ export interface TenantPaymentSummary {
     due_date: string
     paid_date: string | null
     status: 'pending' | 'paid' | 'overdue' | 'failed'
+    payment_type?: string
+    description?: string | null
   }>
 }
