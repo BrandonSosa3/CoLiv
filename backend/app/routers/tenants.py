@@ -194,7 +194,7 @@ def get_tenants_by_property(
         # For now, we'll include all moved out tenants since we need to add property tracking
         # In a future update, we should add a property_id field to tenants table
         
-        all_property_tenants = active_tenants + moved_out_tenants
+        all_property_tenants = active_tenants + moved_out_tenants 
         
         for tenant in all_property_tenants:
             user = db.query(User).filter(User.id == tenant.user_id).first()
