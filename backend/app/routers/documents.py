@@ -255,3 +255,14 @@ def delete_document(
     db.commit()
     
     return {"message": "Document deleted successfully"}
+
+@router.get("/debug-env")
+def debug_env():
+    """Debug endpoint to check environment variables"""
+    import os
+    return {
+        "R2_ENDPOINT_URL": os.getenv("R2_ENDPOINT_URL", "NOT_SET"),
+        "R2_ACCESS_KEY_ID": os.getenv("R2_ACCESS_KEY_ID", "NOT_SET"),
+        "R2_SECRET_ACCESS_KEY": "***" if os.getenv("R2_SECRET_ACCESS_KEY") else "NOT_SET",
+        "R2_BUCKET_NAME": os.getenv("R2_BUCKET_NAME", "NOT_SET"),
+    }
