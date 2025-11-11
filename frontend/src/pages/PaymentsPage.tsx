@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/Button'
 import { FilterDropdown } from '@/components/ui/FilterDropdown'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, Calendar, ChevronRight, User } from 'lucide-react'
+import { DollarSign, Calendar, ChevronRight, User, Plus } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { TenantPaymentSummary } from '@/types'
 import { TenantPaymentModal } from '@/components/tenants/TenantPaymentModal'
+import { CustomPaymentRequestModal } from '@/components/payments/CustomPaymentRequestModal'
 
 export function PaymentsPage() {
   const queryClient = useQueryClient()
@@ -19,6 +20,7 @@ export function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [propertyFilter, setPropertyFilter] = useState('all')
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
+  const [showCustomPaymentModal, setShowCustomPaymentModal] = useState(false)
   const [selectedTenant, setSelectedTenant] = useState<TenantPaymentSummary | null>(null)
 
   const { data: properties } = useQuery({
@@ -155,17 +157,27 @@ export function PaymentsPage() {
             Track rent payments by tenant across all properties
           </p>
         </div>
-        <Button
-          onClick={() => setShowGenerateDialog(true)}
-          disabled={generateRecurringMutation.isPending}
-          className="flex items-center gap-2"
-        >
-          <Calendar className="w-4 h-4" />
-          {generateRecurringMutation.isPending ? 'Generating...' : 'Generate Monthly Payments'}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setShowCustomPaymentModal(true)}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Payment Request
+          </Button>
+          <Button
+            onClick={() => setShowGenerateDialog(true)}
+            disabled={generateRecurringMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            {generateRecurringMutation.isPending ? 'Generating...' : 'Generate Monthly Payments'}
+          </Button>
+        </div>
       </div>
 
-      {/* Generate Dialog - same as before */}
+      {/* Generate Dialog */}
       {showGenerateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
@@ -339,7 +351,7 @@ export function PaymentsPage() {
         </Card>
       )}
 
-      {/* Tenant Detail Modal - we'll create this next */}
+      {/* Tenant Detail Modal */}
       {selectedTenant && (
         <TenantPaymentModal
           tenant={selectedTenant}
@@ -347,6 +359,12 @@ export function PaymentsPage() {
           onPaymentUpdate={markAsPaidMutation.mutate}
         />
       )}
+
+      {/* Custom Payment Request Modal */}
+      <CustomPaymentRequestModal
+        isOpen={showCustomPaymentModal}
+        onClose={() => setShowCustomPaymentModal(false)}
+      />
     </div>
   )
 }

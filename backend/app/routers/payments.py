@@ -209,3 +209,70 @@ def generate_recurring_payments(
         "message": f"Generated {generated_count} payments for all active lease periods",
         "generated_count": generated_count
     }
+
+
+
+@router.post("/custom-request", response_model=PaymentResponse, status_code=status.HTTP_201_CREATED)
+def create_custom_payment_request(
+    payment: PaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """
+    Create a custom payment request (insurance, service fee, utilities, etc.)
+    This allows operators to create ad-hoc payments for tenants.
+    """
+    
+    # Verify tenant exists
+    tenant = db.query(Tenant).filter(Tenant.id == payment.tenant_id).first()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tenant not found"
+        )
+    
+    # Verify operator has access to this tenant through property ownership
+    if tenant.room_id:
+        room = db.query(Room).filter(Room.id == tenant.room_id).first()
+        unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+        property = db.query(Property).filter(Property.id == unit.property_id).first()
+        
+        if property.operator_id != current_user.operator.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to create payment for this tenant"
+            )
+    
+    # Validate this is a custom payment (not regular rent)
+    if not payment.payment_type or payment.payment_type == 'rent':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="payment_type is required and cannot be 'rent' for custom requests"
+        )
+    
+    # Validate description is provided for custom payments
+    if not payment.description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="description is required for custom payment requests"
+        )
+    
+    # Create the custom payment request
+    db_payment = Payment(
+        tenant_id=payment.tenant_id,
+        room_id=payment.room_id,  # Can be None for property-wide payments
+        amount=payment.amount,
+        due_date=payment.due_date,
+        payment_type=payment.payment_type,
+        description=payment.description,
+        payment_method=payment.payment_method if payment.payment_method else 'manual',
+        late_fee=payment.late_fee if payment.late_fee else 0,
+        status='pending',
+        created_by=current_user.id  # Track who created it
+    )
+    
+    db.add(db_payment)
+    db.commit()
+    db.refresh(db_payment)
+    
+    return db_payment
