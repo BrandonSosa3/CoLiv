@@ -46,6 +46,7 @@ export function DocumentsPage() {
   const sharedDocuments = filteredDocuments.filter(doc => !doc.is_tenant_specific)
 
   const handleDownload = async (documentId: string, filename: string) => {
+    console.log('DEBUG: Downloading document:', documentId, filename)
     try {
       const response = await documentsApi.downloadDocument(documentId)
       const { download_url } = response
@@ -57,6 +58,7 @@ export function DocumentsPage() {
       link.click()
       document.body.removeChild(link)
     } catch (error) {
+      console.error('Download error:', error)
       toast.error('Failed to download document')
     }
   }
