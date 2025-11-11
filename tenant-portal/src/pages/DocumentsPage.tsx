@@ -106,7 +106,7 @@ export function DocumentsPage() {
                 <p className="text-sm text-[#98989d]">Total Documents</p>
                 <p className="text-xl font-bold text-white">{allDocuments.length}</p>
               </div>
-            </div>
+            </div> 
           </CardContent>
         </Card>
 
