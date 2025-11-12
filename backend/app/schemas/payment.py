@@ -25,10 +25,14 @@ class PaymentCreate(PaymentBase):
 
 
 class PaymentUpdate(BaseModel):
+    amount: Optional[Decimal] = None
+    due_date: Optional[date] = None
     paid_date: Optional[date] = None
     status: Optional[PaymentStatus] = None
     payment_method: Optional[str] = None
     late_fee: Optional[Decimal] = None
+    payment_type: Optional[str] = None
+    description: Optional[str] = None
 
 
 class PaymentResponse(PaymentBase):

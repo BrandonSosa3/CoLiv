@@ -76,21 +76,23 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
   const updatePaymentMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const response = await apiClient.put(`/payments/${payment?.id}`, {
+        amount: parseFloat(data.amount),
+        due_date: data.due_date,
         paid_date: data.paid_date || null,
         status: data.status,
+        payment_type: data.payment_type,
+        description: data.description || null,
         payment_method: data.payment_method || null,
         late_fee: 0,
       });
       return response.data;
     },
     onSuccess: () => {
-      // Invalidate multiple query keys to ensure all payment lists refresh
       queryClient.invalidateQueries({ queryKey: ['all-payments'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       
       toast.success('Payment updated successfully');
       
-      // Close modal after a brief delay to allow the UI to update
       setTimeout(() => {
         onClose();
       }, 300);
@@ -113,7 +115,6 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
       return;
     }
 
-    // If status is paid, paid_date is required
     if (formData.status === 'paid' && !formData.paid_date) {
       toast.error('Paid date is required when status is paid');
       return;
@@ -133,7 +134,6 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-[#1c1c1e] rounded-xl border border-[#2c2c2e] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#2c2c2e]">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -153,37 +153,43 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Amount (Read-only for now) */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               <DollarSign className="w-4 h-4 inline mr-2" />
-              Amount
+              Amount <span className="text-[#ff453a]">*</span>
             </label>
             <input
-              type="text"
-              value={`$${parseFloat(formData.amount).toFixed(2)}`}
-              disabled
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2c2c2e] rounded-lg text-[#636366] cursor-not-allowed"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              placeholder="0.00"
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+              required
             />
           </div>
 
-          {/* Payment Type (Read-only for now) */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               <Tag className="w-4 h-4 inline mr-2" />
-              Payment Type
+              Payment Type <span className="text-[#ff453a]">*</span>
             </label>
-            <input
-              type="text"
-              value={PAYMENT_TYPES.find(t => t.value === formData.payment_type)?.label || formData.payment_type}
-              disabled
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2c2c2e] rounded-lg text-[#636366] cursor-not-allowed"
-            />
+            <select
+              value={formData.payment_type}
+              onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+              required
+            >
+              {PAYMENT_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               Status <span className="text-[#ff453a]">*</span>
@@ -202,21 +208,20 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
             </select>
           </div>
 
-          {/* Due Date (Read-only for now) */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               <Calendar className="w-4 h-4 inline mr-2" />
-              Due Date
+              Due Date <span className="text-[#ff453a]">*</span>
             </label>
             <input
               type="date"
               value={formData.due_date}
-              disabled
-              className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2c2c2e] rounded-lg text-[#636366] cursor-not-allowed"
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+              required
             />
           </div>
 
-          {/* Paid Date */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               <Calendar className="w-4 h-4 inline mr-2" />
@@ -231,7 +236,6 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
             />
           </div>
 
-          {/* Payment Method */}
           <div>
             <label className="block text-sm font-medium text-[#98989d] mb-2">
               Payment Method
@@ -245,23 +249,20 @@ export const EditPaymentModal: React.FC<EditPaymentModalProps> = ({
             />
           </div>
 
-          {/* Description (Read-only) */}
-          {formData.description && (
-            <div>
-              <label className="block text-sm font-medium text-[#98989d] mb-2">
-                <FileText className="w-4 h-4 inline mr-2" />
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                disabled
-                rows={3}
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2c2c2e] rounded-lg text-[#636366] cursor-not-allowed resize-none"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-[#98989d] mb-2">
+              <FileText className="w-4 h-4 inline mr-2" />
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Optional payment description..."
+              rows={3}
+              className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea] resize-none"
+            />
+          </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
