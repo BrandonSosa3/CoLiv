@@ -262,6 +262,6 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
         onClose={() => setEditingPayment(null)}
         payment={editingPayment}
       />
-    </>
+    </>  
   )
 }
