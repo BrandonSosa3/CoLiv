@@ -182,3 +182,44 @@ def create_custom_payment_request(
     db.refresh(db_payment)
     
     return db_payment
+
+
+@router.put("/{payment_id}", response_model=PaymentResponse)
+def update_payment(
+    payment_id: str,
+    payment_update: PaymentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Update a payment record"""
+    
+    # Get the payment
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found"
+        )
+    
+    # Verify ownership through tenant -> room -> unit -> property
+    tenant = db.query(Tenant).filter(Tenant.id == payment.tenant_id).first()
+    if tenant.room_id:
+        room = db.query(Room).filter(Room.id == tenant.room_id).first()
+        unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+        property = db.query(Property).filter(Property.id == unit.property_id).first()
+        
+        if property.operator_id != current_user.operator.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to update this payment"
+            )
+    
+    # Update payment fields
+    update_data = payment_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(payment, field, value)
+    
+    db.commit()
+    db.refresh(payment)
+    
+    return payment
