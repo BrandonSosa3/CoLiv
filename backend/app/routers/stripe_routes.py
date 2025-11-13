@@ -8,6 +8,7 @@ from app.services.stripe_service import StripeService
 from app.utils.auth import get_current_user
 import stripe
 import os
+from datetime import datetime
 
 router = APIRouter(prefix="/stripe", tags=["Stripe"])
 
@@ -111,9 +112,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if payment_id:
             payment = db.query(Payment).filter(Payment.id == payment_id).first()
             if payment:
-                from datetime import datetime
+                # Use today's date, not the payment intent creation date
                 payment.status = "paid"
-                payment.paid_date = datetime.fromtimestamp(payment_intent.get("created")).date()
+                payment.paid_date = datetime.now().date()
                 payment.payment_method = "stripe"
                 db.commit()
     
