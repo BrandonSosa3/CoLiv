@@ -278,3 +278,6 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
     </>
   )
 }
+
+
+

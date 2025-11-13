@@ -84,17 +84,28 @@ export function PaymentsPage() {
 
       {/* Next Payment Alert */}
       {overduePayments.length > 0 ? (
-        <Card className="border-[#ff453a]/20">
+        <Card className="border-[#ff453a]/50 bg-[#ff453a]/5">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-6 h-6 text-[#ff453a]" />
-              <div>
+              <div className="p-3 rounded-full bg-[#ff453a]/20">
+                <AlertCircle className="w-6 h-6 text-[#ff453a]" />
+              </div>
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-[#ff453a]">
                   {overduePayments.length} Overdue Payment{overduePayments.length > 1 ? 's' : ''}
                 </h3>
-                <p className="text-[#98989d]">
-                  Please contact your property manager to resolve overdue payments
+                <p className="text-[#98989d] mt-1">
+                  Please contact your property manager immediately to resolve overdue payments
                 </p>
+                <div className="mt-3 flex gap-2 flex-wrap">
+                  {overduePayments.slice(0, 3).map((payment) => (
+                    <div key={payment.id} className="px-3 py-1 bg-[#ff453a]/20 rounded-full">
+                      <span className="text-sm text-[#ff453a] font-medium">
+                        {formatCurrency(Number(payment.amount))} - Due {formatDate(payment.due_date)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -199,22 +210,37 @@ export function PaymentsPage() {
               {paymentsData.map((payment) => (
                 <div
                   key={payment.id}
-                  className="p-4 rounded-lg bg-[#141414] border border-[#2c2c2e]"
+                  className={`p-4 rounded-lg border transition-all ${
+                    payment.status === 'overdue'
+                      ? 'bg-[#ff453a]/5 border-[#ff453a]/50 shadow-lg shadow-[#ff453a]/10'
+                      : 'bg-[#141414] border-[#2c2c2e]'
+                  }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20">
+                      <div className={`p-2 rounded-lg ${
+                        payment.status === 'overdue'
+                          ? 'bg-[#ff453a]/20'
+                          : 'bg-gradient-to-br from-[#667eea]/20 to-[#764ba2]/20'
+                      }`}>
                         {statusIcons[payment.status]}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="font-semibold text-white">
+                          <p className={`font-semibold ${
+                            payment.status === 'overdue' ? 'text-[#ff453a]' : 'text-white'
+                          }`}>
                             {formatCurrency(Number(payment.amount))}
                           </p>
                           {payment.payment_type && getPaymentTypeBadge(payment.payment_type)}
                         </div>
-                        <p className="text-sm text-[#98989d]">
+                        <p className={`text-sm ${
+                          payment.status === 'overdue' ? 'text-[#ff453a]' : 'text-[#98989d]'
+                        }`}>
                           Due: {formatDate(payment.due_date)}
+                          {payment.status === 'overdue' && (
+                            <span className="ml-2 font-semibold">⚠ OVERDUE</span>
+                          )}
                         </p>
                         {payment.paid_date && (
                           <p className="text-sm text-[#32d74b]">
@@ -230,7 +256,7 @@ export function PaymentsPage() {
                       </div>
                     </div>
                     
-                    <span className={`px-3 py-1 rounded-full text-sm border ${statusColors[payment.status]}`}>
+                    <span className={`px-3 py-1 rounded-full text-sm border whitespace-nowrap ${statusColors[payment.status]}`}>
                       {payment.status}
                     </span>
                   </div>

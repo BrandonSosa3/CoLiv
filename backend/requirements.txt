@@ -50,3 +50,4 @@ websockets==15.0.1
 python-dateutil==2.9.0.post0
 # Production server
 gunicorn==21.2.0
+stripe==11.1.0
