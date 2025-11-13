@@ -137,6 +137,40 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             print(f"✅ Payment confirmation email sent to {user.email}")
                         except Exception as e:
                             print(f"❌ Failed to send payment confirmation email: {str(e)}")
+                        
+                        # Send payment notification to operator
+                        try:
+                            from app.models.room import Room
+                            from app.models.unit import Unit
+                            from app.models.property import Property
+                            from app.models.operator import Operator
+                            
+                            room = db.query(Room).filter(Room.id == tenant.room_id).first()
+                            if room:
+                                unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+                                if unit:
+                                    property_obj = db.query(Property).filter(Property.id == unit.property_id).first()
+                                    if property_obj:
+                                        operator = db.query(Operator).filter(Operator.id == property_obj.operator_id).first()
+                                        if operator:
+                                            operator_user = db.query(User).filter(User.id == operator.user_id).first()
+                                            if operator_user:
+                                                operator_name = f"{operator_user.first_name} {operator_user.last_name}" if operator_user.first_name else operator_user.email
+                                                
+                                                EmailService.send_operator_payment_received(
+                                                    operator_email=operator_user.email,
+                                                    operator_name=operator_name,
+                                                    tenant_name=tenant_name,
+                                                    tenant_email=user.email,
+                                                    amount=float(payment.amount),
+                                                    payment_date=payment.paid_date,
+                                                    property_name=property_obj.name,
+                                                    unit_number=unit.unit_number,
+                                                    room_number=room.room_number
+                                                )
+                                                print(f"✅ Operator payment notification sent to {operator_user.email}")
+                        except Exception as e:
+                            print(f"❌ Failed to send operator notification: {str(e)}")
     
     elif event["type"] == "payment_intent.payment_failed":
         payment_intent = event["data"]["object"]
