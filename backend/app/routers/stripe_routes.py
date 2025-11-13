@@ -6,8 +6,8 @@ from app.models.tenant import Tenant
 from app.models.payment import Payment
 from app.services.stripe_service import StripeService
 from app.utils.auth import get_current_user
-from app.config import settings
 import stripe
+import os
 
 router = APIRouter(prefix="/stripe", tags=["Stripe"])
 
@@ -77,7 +77,7 @@ def create_payment_intent(
         
         return {
             "clientSecret": result["client_secret"],
-            "publishableKey": settings.STRIPE_PUBLISHABLE_KEY,
+            "publishableKey": os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
         }
     except Exception as e:
         raise HTTPException(
@@ -92,10 +92,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
     
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            payload, sig_header, webhook_secret
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
@@ -110,8 +111,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if payment_id:
             payment = db.query(Payment).filter(Payment.id == payment_id).first()
             if payment:
+                from datetime import datetime
                 payment.status = "paid"
-                payment.paid_date = payment_intent.get("created")
+                payment.paid_date = datetime.fromtimestamp(payment_intent.get("created")).date()
                 payment.payment_method = "stripe"
                 db.commit()
     
@@ -132,5 +134,5 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 def get_stripe_config():
     """Get Stripe publishable key for frontend"""
     return {
-        "publishableKey": settings.STRIPE_PUBLISHABLE_KEY,
+        "publishableKey": os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
     }

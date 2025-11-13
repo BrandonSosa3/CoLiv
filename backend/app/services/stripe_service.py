@@ -1,10 +1,9 @@
 import stripe
 import os
 from decimal import Decimal
-from app.config import settings
 
-# Initialize Stripe with your secret key
-stripe.api_key = settings.STRIPE_SECRET_KEY
+# Initialize Stripe with secret key from environment
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 class StripeService:
     @staticmethod
