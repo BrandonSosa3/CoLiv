@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.payment import Payment
 from app.services.stripe_service import StripeService
+from app.services.email_service import EmailService
 from app.utils.auth import get_current_user
 import stripe
 import os
@@ -112,11 +113,30 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if payment_id:
             payment = db.query(Payment).filter(Payment.id == payment_id).first()
             if payment:
-                # Use today's date, not the payment intent creation date
+                # Update payment status
                 payment.status = "paid"
                 payment.paid_date = datetime.now().date()
                 payment.payment_method = "stripe"
                 db.commit()
+                
+                # Get tenant info for email
+                tenant = db.query(Tenant).filter(Tenant.id == payment.tenant_id).first()
+                if tenant:
+                    user = db.query(User).filter(User.id == tenant.user_id).first()
+                    if user:
+                        # Send payment confirmation email
+                        try:
+                            tenant_name = f"{user.first_name} {user.last_name}" if user.first_name else user.email
+                            EmailService.send_payment_confirmation(
+                                tenant_email=user.email,
+                                tenant_name=tenant_name,
+                                amount=float(payment.amount),
+                                payment_date=payment.paid_date,
+                                payment_method="Stripe"
+                            )
+                            print(f"✅ Payment confirmation email sent to {user.email}")
+                        except Exception as e:
+                            print(f"❌ Failed to send payment confirmation email: {str(e)}")
     
     elif event["type"] == "payment_intent.payment_failed":
         payment_intent = event["data"]["object"]

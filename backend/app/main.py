@@ -1,3 +1,4 @@
+from backend.app.routers import notifications
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -16,7 +17,8 @@ from app.routers import (
     announcements,
     preferences,
     tenant_portal,
-    tenant_auth
+    tenant_auth,
+    notifications
 )
 
 # Load environment variables
@@ -84,3 +86,4 @@ app.include_router(tenant_portal.router, prefix="/api/v1")
 app.include_router(tenant_auth.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(stripe_routes.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
