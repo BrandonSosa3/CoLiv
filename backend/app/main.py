@@ -1,4 +1,4 @@
-from backend.app.routers import notifications
+from app.routers import notifications
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
