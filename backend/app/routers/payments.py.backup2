@@ -91,11 +91,6 @@ def get_payments_by_property(
         payment_records = db.query(Payment).filter(Payment.tenant_id.in_(tenant_ids)).all()
         
         for payment in payment_records:
-            # Auto-update status to overdue if past due date and not paid
-            if payment.status == 'pending' and payment.due_date < date.today():
-                payment.status = 'overdue'
-                db.commit()
-            
             tenant = db.query(Tenant).filter(Tenant.id == payment.tenant_id).first()
             user = db.query(User).filter(User.id == tenant.user_id).first()
             room = db.query(Room).filter(Room.id == tenant.room_id).first()

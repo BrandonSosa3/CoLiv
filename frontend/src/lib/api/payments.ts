@@ -24,9 +24,7 @@ export interface PaymentWithDetails extends Payment {
 
 export interface RecurringPaymentResponse {
   message: string
-  generated_count: number
-  due_date: string
-  month: string
+  created: number
 }
 
 export const paymentsApi = {
