@@ -205,23 +205,19 @@ export function TenantPaymentModal({ tenant, onClose, onPaymentUpdate }: TenantP
                             </p>
                             {payment.payment_type && getPaymentTypeBadge(payment.payment_type)}
                           </div>
-                          <div className="flex items-center gap-3 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-[#98989d]" />
-                              <span className={payment.status === 'overdue' ? 'text-[#ff453a]' : 'text-[#98989d]'}>
-                                Due: {formatDate(payment.due_date)}
-                                {payment.status === 'overdue' && ' - OVERDUE'}
-                              </span>
-                            </div>
-                            {payment.payment_date && (
-                              <div className="flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3 text-[#32d74b]" />
-                                <span className="text-[#32d74b]">
-                                  Paid: {formatDate(payment.payment_date)}
-                                </span>
-                              </div>
+                          <p className={`text-sm ${ 
+                            payment.status === 'overdue' ? 'text-[#ff453a]' : 'text-[#98989d]'
+                          }`}>
+                            Due: {formatDate(payment.due_date)}
+                            {payment.status === 'overdue' && (
+                              <span className="ml-2 font-semibold">⚠ OVERDUE</span>
                             )}
-                          </div>
+                          </p>
+                          {payment.paid_date && (
+                            <p className="text-sm text-[#32d74b]">
+                              Paid: {formatDate(payment.paid_date)}
+                            </p>
+                          )}
                           {payment.description && payment.payment_type !== 'rent' && (
                             <div className="mt-2 flex items-start gap-2">
                               <FileText className="w-4 h-4 text-[#98989d] mt-0.5 flex-shrink-0" />
