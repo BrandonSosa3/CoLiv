@@ -101,7 +101,10 @@ export function PaymentsPage() {
     }
 
     const summary = tenantMap.get(key)
-    summary.allPayments.push(payment)
+    summary.allPayments.push({
+      ...payment,
+      paid_date: payment.paid_date, // Use the existing paid_date field
+    })
     summary.payments.total++
     summary.payments.totalAmount += Number(payment.amount)
 
