@@ -1,11 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { paymentsApi } from '@/lib/api/payments'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar, FileText, Tag } from 'lucide-react'
+import { DollarSign, CheckCircle, Clock, AlertCircle, Calendar, FileText, Tag, CreditCard } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import { PaymentModal } from '@/components/payments/PaymentModal'
 
 export function PaymentsPage() {
+  const queryClient = useQueryClient()
+  const [selectedPayment, setSelectedPayment] = useState<any>(null)
+
   const { data: payments, isLoading } = useQuery({
     queryKey: ['my-payments'],
     queryFn: paymentsApi.getMyPayments,
@@ -72,6 +77,11 @@ export function PaymentsPage() {
     )
   }
 
+  const handlePaymentSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['my-payments'] })
+    setSelectedPayment(null)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -95,7 +105,7 @@ export function PaymentsPage() {
                   {overduePayments.length} Overdue Payment{overduePayments.length > 1 ? 's' : ''}
                 </h3>
                 <p className="text-[#98989d] mt-1">
-                  Please contact your property manager immediately to resolve overdue payments
+                  Please pay immediately to avoid late fees
                 </p>
                 <div className="mt-3 flex gap-2 flex-wrap">
                   {overduePayments.slice(0, 3).map((payment) => (
@@ -113,22 +123,31 @@ export function PaymentsPage() {
       ) : nextPayment ? (
         <Card className="border-[#ffd60a]/20">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-[#ffd60a]" />
-              <div>
-                <h3 className="text-lg font-semibold text-white">Next Payment Due</h3>
-                <p className="text-2xl font-bold text-[#ffd60a] mt-1">
-                  {formatCurrency(Number(nextPayment.amount))}
-                </p>
-                <p className="text-[#98989d]">
-                  Due on {formatDate(nextPayment.due_date)}
-                </p>
-                {nextPayment.payment_type && nextPayment.payment_type !== 'rent' && (
-                  <div className="mt-2">
-                    {getPaymentTypeBadge(nextPayment.payment_type)}
-                  </div>
-                )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-[#ffd60a]" />
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Next Payment Due</h3>
+                  <p className="text-2xl font-bold text-[#ffd60a] mt-1">
+                    {formatCurrency(Number(nextPayment.amount))}
+                  </p>
+                  <p className="text-[#98989d]">
+                    Due on {formatDate(nextPayment.due_date)}
+                  </p>
+                  {nextPayment.payment_type && nextPayment.payment_type !== 'rent' && (
+                    <div className="mt-2">
+                      {getPaymentTypeBadge(nextPayment.payment_type)}
+                    </div>
+                  )}
+                </div>
               </div>
+              <button
+                onClick={() => setSelectedPayment(nextPayment)}
+                className="px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5568d3] hover:to-[#6b3fa0] text-white rounded-lg transition-all flex items-center gap-2 font-semibold"
+              >
+                <CreditCard className="w-5 h-5" />
+                Pay Now
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -256,9 +275,25 @@ export function PaymentsPage() {
                       </div>
                     </div>
                     
-                    <span className={`px-3 py-1 rounded-full text-sm border whitespace-nowrap ${statusColors[payment.status]}`}>
-                      {payment.status}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-sm border whitespace-nowrap ${statusColors[payment.status]}`}>
+                        {payment.status}
+                      </span>
+                      
+                      {(payment.status === 'pending' || payment.status === 'overdue') && (
+                        <button
+                          onClick={() => setSelectedPayment(payment)}
+                          className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-medium ${
+                            payment.status === 'overdue'
+                              ? 'bg-[#ff453a] hover:bg-[#ff453a]/90 text-white'
+                              : 'bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5568d3] hover:to-[#6b3fa0] text-white'
+                          }`}
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          Pay
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -266,6 +301,14 @@ export function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={!!selectedPayment}
+        onClose={() => setSelectedPayment(null)}
+        payment={selectedPayment}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   )
 }
