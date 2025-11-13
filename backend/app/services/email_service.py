@@ -7,7 +7,7 @@ from datetime import datetime, date
 resend.api_key = os.getenv("RESEND_API_KEY", "")
 
 class EmailService:
-    FROM_EMAIL = "CoLiv <noreply@resend.dev>"  # We'll update this with your domain later
+    FROM_EMAIL = "CoLiv <onboarding@resend.dev>"  # We'll update this with your domain later
     
     @staticmethod
     def send_payment_reminder(
