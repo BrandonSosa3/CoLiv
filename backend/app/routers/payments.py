@@ -272,7 +272,7 @@ def generate_recurring_payments(
     for tenant in tenants:
         # Get tenant's room to get rent amount
         room = db.query(Room).filter(Room.id == tenant.room_id).first()
-        if not room or not room.rent:
+        if not room or not room.rent_amount:
             continue
         
         # Generate payments from lease_start to lease_end
@@ -294,7 +294,7 @@ def generate_recurring_payments(
                 new_payment = Payment(
                     tenant_id=tenant.id,
                     room_id=room.id,
-                    amount=room.rent,
+                    amount=room.rent_amount,
                     due_date=current_date,
                     status='pending',
                     payment_type='rent',
