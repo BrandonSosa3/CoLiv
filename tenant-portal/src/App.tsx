@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MaintenancePage } from './pages/MaintenancePage'
+import { MessagesPage } from './pages/MessagesPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PreferencesPage } from './pages/PreferencesPage'
@@ -40,6 +41,7 @@ function App() {
           >
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/maintenance" element={<MaintenancePage />} />
+              <Route path="/messages" element={<MessagesPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
