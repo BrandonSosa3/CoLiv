@@ -11,6 +11,7 @@ import { PaymentsPage } from './pages/PaymentsPage'
 import { MaintenancePage } from './pages/MaintenancePage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { MessagesPage } from './pages/MessagesPage'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -48,6 +49,7 @@ function App() {
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="messages" element={<MessagesPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="documents" element={<DocumentsPage />} />
           </Route>
