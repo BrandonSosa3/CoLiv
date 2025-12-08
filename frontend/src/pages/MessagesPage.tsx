@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { messagesApi, Conversation } from '@/lib/api/messages'
+import { tenantsApi } from '@/lib/api/tenants'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingScreen } from '@/components/ui/Spinner'
-import { MessageSquare, Send, User, MapPin } from 'lucide-react'
+import { MessageSquare, Send, User, MapPin, Plus, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -14,10 +15,17 @@ export function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [messageText, setMessageText] = useState('')
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false)
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('')
 
   const { data: conversations, isLoading } = useQuery({
     queryKey: ['conversations'],
     queryFn: messagesApi.getConversations,
+  })
+
+  const { data: allTenants } = useQuery({
+    queryKey: ['all-tenants'],
+    queryFn: tenantsApi.getAll,
   })
 
   const sendMessageMutation = useMutation({
@@ -25,6 +33,8 @@ export function MessagesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       setMessageText('')
+      setShowNewMessageModal(false)
+      setSelectedTenantId('')
       toast.success('Message sent')
     },
     onError: () => {
@@ -48,12 +58,16 @@ export function MessagesPage() {
     conv.tenant_email.toLowerCase().includes(searchQuery.toLowerCase())
   ) || []
 
+  // Get tenants without existing conversations
+  const tenantsWithoutConversations = allTenants?.filter(
+    tenant => !conversations?.some(conv => conv.tenant_id === tenant.tenant.id)
+  ) || []
+
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return
 
-    // Get tenant user_id from messages (receiver is the tenant we're messaging)
+    // Get tenant user_id from first message
     const tenantMessage = selectedConversation.messages.find(m => m.sender_role === 'tenant')
-    
     const receiver_id = tenantMessage?.sender_id || selectedConversation.messages[0]?.sender_id
 
     if (!receiver_id) {
@@ -68,14 +82,36 @@ export function MessagesPage() {
     })
   }
 
+  const handleStartNewConversation = () => {
+    if (!messageText.trim() || !selectedTenantId) {
+      toast.error('Please select a tenant and enter a message')
+      return
+    }
+
+    const selectedTenant = allTenants?.find(t => t.tenant.id === selectedTenantId)
+    if (!selectedTenant) return
+
+    sendMessageMutation.mutate({
+      receiver_id: selectedTenant.tenant.user_id,
+      tenant_id: selectedTenantId,
+      message: messageText,
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Messages</h1>
-        <p className="text-[#98989d] mt-1">
-          Communicate with your tenants
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Messages</h1>
+          <p className="text-[#98989d] mt-1">
+            Communicate with your tenants
+          </p>
+        </div>
+        <Button onClick={() => setShowNewMessageModal(true)}>
+          <Plus className="w-5 h-5 mr-2" />
+          New Message
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -100,7 +136,10 @@ export function MessagesPage() {
             {filteredConversations.length === 0 ? (
               <div className="text-center py-12">
                 <MessageSquare className="w-12 h-12 mx-auto mb-4 text-[#636366]" />
-                <p className="text-[#98989d]">No conversations yet</p>
+                <p className="text-[#98989d] mb-4">No conversations yet</p>
+                <Button onClick={() => setShowNewMessageModal(true)} variant="secondary">
+                  Start a conversation
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -217,12 +256,90 @@ export function MessagesPage() {
             <div className="flex items-center justify-center h-full py-20">
               <div className="text-center">
                 <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[#636366]" />
-                <p className="text-[#98989d]">Select a conversation to start messaging</p>
+                <p className="text-[#98989d] mb-4">Select a conversation to start messaging</p>
+                <Button onClick={() => setShowNewMessageModal(true)}>
+                  <Plus className="w-5 h-5 mr-2" />
+                  Start New Conversation
+                </Button>
               </div>
             </div>
           )}
         </Card>
       </div>
+
+      {/* New Message Modal */}
+      {showNewMessageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-2xl bg-[#1c1c1e] border border-[#2c2c2e] rounded-2xl shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-[#2c2c2e]">
+              <h2 className="text-xl font-semibold text-white">New Message</h2>
+              <button
+                onClick={() => {
+                  setShowNewMessageModal(false)
+                  setMessageText('')
+                  setSelectedTenantId('')
+                }}
+                className="p-2 rounded-lg hover:bg-[#2c2c2e] transition-colors"
+              >
+                <X className="w-5 h-5 text-[#98989d]" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Select Tenant
+                </label>
+                <select
+                  value={selectedTenantId}
+                  onChange={(e) => setSelectedTenantId(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                >
+                  <option value="">Choose a tenant...</option>
+                  {tenantsWithoutConversations.map((tenant) => (
+                    <option key={tenant.tenant.id} value={tenant.tenant.id}>
+                      {tenant.tenant.name} - {tenant.tenant.property}, Unit {tenant.tenant.unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#98989d] mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Type your message..."
+                  className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-[#667eea] resize-none"
+                  rows={5}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-[#2c2c2e]">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowNewMessageModal(false)
+                  setMessageText('')
+                  setSelectedTenantId('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleStartNewConversation}
+                disabled={!messageText.trim() || !selectedTenantId || sendMessageMutation.isPending}
+              >
+                <Send className="w-5 h-5 mr-2" />
+                Send Message
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
