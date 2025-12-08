@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { messagesApi } from '../lib/api/messages'
+import { messagesApi, Message } from '../lib/api/messages'
 import { MessageSquare, Send, User } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -45,8 +45,8 @@ export function MessagesPage() {
     if (!messageText.trim() || !conversation) return
 
     // Get operator user_id from messages (receiver if tenant sent, sender if operator sent)
-    const operatorMessage = conversation.messages.find(m => m.sender_role === 'operator')
-    const tenantMessage = conversation.messages.find(m => m.sender_role === 'tenant')
+    const operatorMessage = conversation.messages.find((m: Message) => m.sender_role === 'operator')
+    const tenantMessage = conversation.messages.find((m: Message) => m.sender_role === 'tenant')
     
     const receiver_id = operatorMessage?.sender_id || tenantMessage?.receiver_id
 
@@ -105,7 +105,7 @@ export function MessagesPage() {
                   </div>
                 </div>
               ) : (
-                conversation.messages.map((msg) => {
+                conversation.messages.map((msg: Message) => {
                   const isTenant = msg.sender_role === 'tenant'
                   return (
                     <div
