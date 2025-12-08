@@ -18,7 +18,8 @@ from app.routers import (
     preferences,
     tenant_portal,
     tenant_auth,
-    notifications
+    notifications,
+    messages
 )
 
 # Load environment variables
