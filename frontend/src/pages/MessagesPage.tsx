@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { messagesApi, Conversation } from '@/lib/api/messages'
+import { propertiesApi } from '@/lib/api/properties'
 import { tenantsApi } from '@/lib/api/tenants'
+import { TenantWithUser } from '@/types'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SearchInput } from '@/components/ui/SearchInput'
@@ -23,9 +25,25 @@ export function MessagesPage() {
     queryFn: messagesApi.getConversations,
   })
 
-  const { data: allTenants } = useQuery({
-    queryKey: ['all-tenants'],
-    queryFn: tenantsApi.getAll,
+  // Get all properties first
+  const { data: properties } = useQuery({
+    queryKey: ['properties'],
+    queryFn: propertiesApi.getAll,
+  })
+
+  // Get all tenants across all properties
+  const { data: allTenants } = useQuery<TenantWithUser[]>({
+    queryKey: ['all-tenants-for-messages', properties?.map(p => p.id)],
+    queryFn: async () => {
+      if (!properties || properties.length === 0) return []
+      // Fetch tenants for all properties and combine them
+      const tenantPromises = properties.map(property => 
+        tenantsApi.getByProperty(property.id)
+      )
+      const tenantArrays = await Promise.all(tenantPromises)
+      return tenantArrays.flat()
+    },
+    enabled: !!properties && properties.length > 0,
   })
 
   const sendMessageMutation = useMutation({
@@ -60,7 +78,7 @@ export function MessagesPage() {
 
   // Get tenants without existing conversations
   const tenantsWithoutConversations = allTenants?.filter(
-    tenant => !conversations?.some(conv => conv.tenant_id === tenant.tenant.id)
+    (tenant: TenantWithUser) => !conversations?.some(conv => conv.tenant_id === tenant.id)
   ) || []
 
   const handleSendMessage = () => {
@@ -88,11 +106,11 @@ export function MessagesPage() {
       return
     }
 
-    const selectedTenant = allTenants?.find(t => t.tenant.id === selectedTenantId)
+    const selectedTenant = allTenants?.find((t: TenantWithUser) => t.id === selectedTenantId)
     if (!selectedTenant) return
 
     sendMessageMutation.mutate({
-      receiver_id: selectedTenant.tenant.user_id,
+      receiver_id: selectedTenant.user_id,
       tenant_id: selectedTenantId,
       message: messageText,
     })
@@ -296,9 +314,11 @@ export function MessagesPage() {
                   className="w-full px-4 py-3 bg-[#141414] border border-[#2c2c2e] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#667eea]"
                 >
                   <option value="">Choose a tenant...</option>
-                  {tenantsWithoutConversations.map((tenant) => (
-                    <option key={tenant.tenant.id} value={tenant.tenant.id}>
-                      {tenant.tenant.name} - {tenant.tenant.property}, Unit {tenant.tenant.unit}
+                  {tenantsWithoutConversations.map((tenant: TenantWithUser) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.first_name && tenant.last_name 
+                        ? `${tenant.first_name} ${tenant.last_name}` 
+                        : tenant.email} - {tenant.property_name}, Unit {tenant.unit_number}
                     </option>
                   ))}
                 </select>
