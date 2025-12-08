@@ -51,8 +51,7 @@ export function MessagesPage() {
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return
 
-    // Get operator user_id from first message (receiver if tenant sent, sender if operator sent)
-    const operatorMessage = selectedConversation.messages.find(m => m.sender_role === 'operator')
+    // Get tenant user_id from messages (receiver is the tenant we're messaging)
     const tenantMessage = selectedConversation.messages.find(m => m.sender_role === 'tenant')
     
     const receiver_id = tenantMessage?.sender_id || selectedConversation.messages[0]?.sender_id
