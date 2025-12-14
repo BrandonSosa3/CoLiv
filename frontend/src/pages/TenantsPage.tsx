@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/Button'
 import { LoadingScreen } from '@/components/ui/Spinner'
 import { CreateTenantModal } from '@/components/tenants/CreateTenantModal'
 import { RemoveTenantDialog } from '@/components/tenants/RemoveTenantDialog'
-import { SetPreferencesModal } from '@/components/tenants/SetPreferencesModal'
-import { ViewMatchesModal } from '@/components/tenants/ViewMatchesModal'
 import { User, UserX, Sparkles, Users } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { TenantWithUser } from '@/types'
@@ -18,8 +16,6 @@ export function TenantsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTenant, setSelectedTenant] = useState<TenantWithUser | null>(null)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false)
-  const [showMatchesModal, setShowMatchesModal] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'moved_out'>('all')
 
   // Get all properties for the dropdown
@@ -48,15 +44,7 @@ export function TenantsPage() {
     return <LoadingScreen message="Loading tenants..." />
   }
 
-  const handleSetPreferences = (tenant: TenantWithUser) => {
-    setSelectedTenant(tenant)
-    setShowPreferencesModal(true)
-  }
 
-  const handleViewMatches = (tenant: TenantWithUser) => {
-    setSelectedTenant(tenant)
-    setShowMatchesModal(true)
-  }
 
   const handleRemoveTenant = (tenant: TenantWithUser) => {
     setSelectedTenant(tenant)
@@ -227,19 +215,15 @@ export function TenantsPage() {
                       size="sm"
                       variant="secondary"
                       className="flex-1"
-                      onClick={() => handleSetPreferences(tenant)}
                     >
                       <Sparkles className="w-4 h-4 mr-1" />
-                      Preferences
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       className="flex-1"
-                      onClick={() => handleViewMatches(tenant)}
                     >
                       <Users className="w-4 h-4 mr-1" />
-                      Matches
                     </Button>
                     <Button
                       size="sm"
@@ -278,23 +262,17 @@ export function TenantsPage() {
         />
       )}
 
-      {showPreferencesModal && selectedTenant && (
-        <SetPreferencesModal
           tenantId={selectedTenant.id}
           tenantEmail={selectedTenant.email}
           onClose={() => {
-            setShowPreferencesModal(false)
             setSelectedTenant(null)
           }}
         />
       )}
 
-      {showMatchesModal && selectedTenant && (
-        <ViewMatchesModal
           tenantId={selectedTenant.id}
           tenantEmail={selectedTenant.email}
           onClose={() => {
-            setShowMatchesModal(false)
             setSelectedTenant(null)
           }}
         />

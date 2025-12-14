@@ -8,7 +8,6 @@ import { MaintenancePage } from './pages/MaintenancePage'
 import { MessagesPage } from './pages/MessagesPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { PreferencesPage } from './pages/PreferencesPage'
 import { TenantLayout } from './components/TenantLayout'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -43,7 +42,6 @@ function App() {
             <Route path="/maintenance" element={<MaintenancePage />} />
               <Route path="/messages" element={<MessagesPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
-            <Route path="/preferences" element={<PreferencesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/documents" element={<DocumentsPage />} />

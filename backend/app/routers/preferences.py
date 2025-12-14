@@ -1,28 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.user import User
-from app.models.tenant import Tenant, TenantStatus
-from app.models.property import Property
-from app.models.unit import Unit
-from app.models.room import Room
+from app.models.tenant import Tenant
+from app.models.operator import Operator
 from app.models.tenant_preference import TenantPreference
 from app.schemas.tenant_preference import (
     TenantPreferenceCreate,
     TenantPreferenceUpdate,
-    TenantPreferenceResponse,
-    TenantPreferenceBase
+    TenantPreferenceResponse
 )
-from app.utils.auth import get_current_operator, get_current_user
-from app.utils.matching import get_best_matches_for_tenant
+from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/preferences", tags=["Tenant Preferences"])
 
+def get_current_operator(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Operator:
+    """Get the current operator from the authenticated user"""
+    if current_user.role != 'operator':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Operator role required."
+        )
+    
+    operator = db.query(Operator).filter(Operator.user_id == current_user.id).first()
+    if not operator:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Operator profile not found"
+        )
+    
+    return operator
 
-# ============ TENANT-SPECIFIC ROUTES (must come first) ============
+# ============ TENANT-SPECIFIC ROUTES ============
 
-@router.get("/me", response_model=TenantPreferenceResponse)
+@router.get("/me")
 def get_my_preferences(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -33,61 +47,25 @@ def get_my_preferences(
     if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant record not found"
+            detail="Tenant not found"
         )
     
-    preference = db.query(TenantPreference).filter(
+    preferences = db.query(TenantPreference).filter(
         TenantPreference.tenant_id == tenant.id
     ).first()
     
-    if not preference:
+    if not preferences:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Preferences not set yet"
+            detail="Preferences not found. Please complete your profile."
         )
     
-    return preference
+    return preferences
 
 
-@router.post("/me", response_model=TenantPreferenceResponse)
-def create_my_preferences(
-    preference: TenantPreferenceBase,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Create preferences for current tenant"""
-    
-    tenant = db.query(Tenant).filter(Tenant.user_id == current_user.id).first()
-    if not tenant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant record not found"
-        )
-    
-    existing = db.query(TenantPreference).filter(
-        TenantPreference.tenant_id == tenant.id
-    ).first()
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Preferences already exist. Use PUT to update."
-        )
-    
-    db_preference = TenantPreference(
-        tenant_id=tenant.id,
-        **preference.model_dump()
-    )
-    db.add(db_preference)
-    db.commit()
-    db.refresh(db_preference)
-    
-    return db_preference
-
-
-@router.put("/me", response_model=TenantPreferenceResponse)
+@router.put("/me")
 def update_my_preferences(
-    preference_update: TenantPreferenceUpdate,
+    pref_update: TenantPreferenceUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -97,109 +75,50 @@ def update_my_preferences(
     if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant record not found"
+            detail="Tenant not found"
         )
     
-    preference = db.query(TenantPreference).filter(
+    preferences = db.query(TenantPreference).filter(
         TenantPreference.tenant_id == tenant.id
     ).first()
     
-    if not preference:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Preferences not found. Create them first."
-        )
+    if not preferences:
+        # Create new preferences if they don't exist
+        preferences = TenantPreference(tenant_id=tenant.id)
+        db.add(preferences)
     
-    for key, value in preference_update.model_dump(exclude_unset=True).items():
-        setattr(preference, key, value)
+    # Update fields
+    update_data = pref_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(preferences, field, value)
     
     db.commit()
-    db.refresh(preference)
+    db.refresh(preferences)
     
-    return preference
+    return preferences
 
 
-@router.get("/my-matches")
-def get_my_roommate_matches(
-    top_n: int = 5,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Get AI-suggested roommate matches for current tenant"""
-    
-    tenant = db.query(Tenant).filter(Tenant.user_id == current_user.id).first()
-    if not tenant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant record not found"
-        )
-    
-    tenant_pref = db.query(TenantPreference).filter(
-        TenantPreference.tenant_id == tenant.id
-    ).first()
-    
-    if not tenant_pref:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Please set your preferences first"
-        )
-    
-    room = db.query(Room).filter(Room.id == tenant.room_id).first()
-    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
-    
-    all_rooms_in_property = db.query(Room).join(Unit).filter(
-        Unit.property_id == unit.property_id
-    ).all()
-    room_ids = [r.id for r in all_rooms_in_property]
-    
-    other_tenants = db.query(Tenant).filter(
-        Tenant.room_id.in_(room_ids),
-        Tenant.id != tenant.id,
-        Tenant.status == TenantStatus.ACTIVE
-    ).all()
-    
-    tenant_ids = [t.id for t in other_tenants]
-    all_preferences = db.query(TenantPreference).filter(
-        TenantPreference.tenant_id.in_(tenant_ids)
-    ).all()
-    
-    if not all_preferences:
-        return []
-    
-    matches = get_best_matches_for_tenant(tenant_pref, all_preferences, top_n)
-    
-    enriched_matches = []
-    for match in matches:
-        other_tenant = db.query(Tenant).filter(Tenant.id == match['tenant_id']).first()
-        user = db.query(User).filter(User.id == other_tenant.user_id).first()
-        
-        enriched_matches.append({
-            **match,
-            'email': user.email[:3] + '***@' + user.email.split('@')[1],
-        })
-    
-    return enriched_matches
-
-
-# ============ OPERATOR ROUTES (parameterized routes come after) ============
+# ============ OPERATOR ROUTES ============
 
 @router.post("/", response_model=TenantPreferenceResponse)
-def create_preference(
-    preference: TenantPreferenceCreate,
+def create_tenant_preferences(
+    tenant_id: str,
+    preferences: TenantPreferenceCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Create tenant preferences (operator only)"""
+    """Create preferences for a tenant (operator only)"""
     
-    tenant = db.query(Tenant).filter(Tenant.id == preference.tenant_id).first()
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Tenant not found"
         )
     
+    # Check if preferences already exist
     existing = db.query(TenantPreference).filter(
-        TenantPreference.tenant_id == preference.tenant_id
+        TenantPreference.tenant_id == tenant_id
     ).first()
     
     if existing:
@@ -208,16 +127,20 @@ def create_preference(
             detail="Preferences already exist for this tenant"
         )
     
-    db_preference = TenantPreference(**preference.model_dump())
-    db.add(db_preference)
-    db.commit()
-    db.refresh(db_preference)
+    new_preferences = TenantPreference(
+        tenant_id=tenant_id,
+        **preferences.model_dump()
+    )
     
-    return db_preference
+    db.add(new_preferences)
+    db.commit()
+    db.refresh(new_preferences)
+    
+    return new_preferences
 
 
-@router.get("/tenant/{tenant_id}", response_model=TenantPreferenceResponse)
-def get_preference_by_tenant(
+@router.get("/{tenant_id}")
+def get_tenant_preferences(
     tenant_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
@@ -231,55 +154,27 @@ def get_preference_by_tenant(
             detail="Tenant not found"
         )
     
-    preference = db.query(TenantPreference).filter(
+    preferences = db.query(TenantPreference).filter(
         TenantPreference.tenant_id == tenant_id
     ).first()
     
-    if not preference:
+    if not preferences:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Preferences not found"
         )
     
-    return preference
+    return preferences
 
 
-@router.put("/{preference_id}", response_model=TenantPreferenceResponse)
-def update_preference(
-    preference_id: str,
-    preference_update: TenantPreferenceUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_operator)
-):
-    """Update tenant preferences (operator only)"""
-    
-    preference = db.query(TenantPreference).filter(
-        TenantPreference.id == preference_id
-    ).first()
-    
-    if not preference:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Preference not found"
-        )
-    
-    for key, value in preference_update.model_dump(exclude_unset=True).items():
-        setattr(preference, key, value)
-    
-    db.commit()
-    db.refresh(preference)
-    
-    return preference
-
-
-@router.get("/matches/{tenant_id}")
-def get_roommate_matches(
+@router.put("/{tenant_id}")
+def update_tenant_preferences(
     tenant_id: str,
-    top_n: int = 5,
+    pref_update: TenantPreferenceUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_operator)
 ):
-    """Get AI-suggested roommate matches for a tenant (operator only)"""
+    """Update preferences for a specific tenant (operator only)"""
     
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
@@ -288,48 +183,46 @@ def get_roommate_matches(
             detail="Tenant not found"
         )
     
-    tenant_pref = db.query(TenantPreference).filter(
+    preferences = db.query(TenantPreference).filter(
         TenantPreference.tenant_id == tenant_id
     ).first()
     
-    if not tenant_pref:
+    if not preferences:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant preferences not found"
+            detail="Preferences not found"
         )
     
-    room = db.query(Room).filter(Room.id == tenant.room_id).first()
-    unit = db.query(Unit).filter(Unit.id == room.unit_id).first()
+    # Update fields
+    update_data = pref_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(preferences, field, value)
     
-    all_rooms_in_property = db.query(Room).join(Unit).filter(
-        Unit.property_id == unit.property_id
-    ).all()
-    room_ids = [r.id for r in all_rooms_in_property]
+    db.commit()
+    db.refresh(preferences)
     
-    other_tenants = db.query(Tenant).filter(
-        Tenant.room_id.in_(room_ids),
-        Tenant.id != tenant_id,
-        Tenant.status == TenantStatus.ACTIVE
-    ).all()
+    return preferences
+
+
+@router.delete("/{tenant_id}")
+def delete_tenant_preferences(
+    tenant_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_operator)
+):
+    """Delete preferences for a specific tenant (operator only)"""
     
-    tenant_ids = [t.id for t in other_tenants]
-    all_preferences = db.query(TenantPreference).filter(
-        TenantPreference.tenant_id.in_(tenant_ids)
-    ).all()
+    preferences = db.query(TenantPreference).filter(
+        TenantPreference.tenant_id == tenant_id
+    ).first()
     
-    if not all_preferences:
-        return []
+    if not preferences:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preferences not found"
+        )
     
-    matches = get_best_matches_for_tenant(tenant_pref, all_preferences, top_n)
+    db.delete(preferences)
+    db.commit()
     
-    enriched_matches = []
-    for match in matches:
-        other_tenant = db.query(Tenant).filter(Tenant.id == match['tenant_id']).first()
-        user = db.query(User).filter(User.id == other_tenant.user_id).first()
-        
-        enriched_matches.append({
-            **match,
-            'email': user.email,
-        })
-    
-    return enriched_matches
+    return {"message": "Preferences deleted successfully"}

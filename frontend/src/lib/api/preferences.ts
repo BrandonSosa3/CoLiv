@@ -11,63 +11,46 @@ export interface TenantPreference {
   social_preference: number
   smoking: boolean
   pets: boolean
-  overnight_guests: boolean
-  interests: string
-  notes: string
+  interests?: string
+  about_me?: string
+  dietary_restrictions?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface RoommateMatch {
-  tenant_id: string
-  email: string
-  current_room_id: string
-  compatibility_score: number
-  breakdown: {
-    cleanliness: number
-    noise: number
-    sleep_schedule: number
-    social: number
-    guests: number
-    work_schedule: number
-    dealbreakers: number
-    interests: number
-  }
-  common_interests: string[]
+export interface TenantPreferenceCreate {
+  cleanliness_importance?: number
+  noise_tolerance?: number
+  guest_frequency?: number
+  sleep_schedule?: string
+  work_schedule?: string
+  social_preference?: number
+  smoking?: boolean
+  pets?: boolean
+  interests?: string
+  about_me?: string
+  dietary_restrictions?: string
 }
 
 export const preferencesApi = {
-  create: async (preference: {
-    tenant_id: string
-    cleanliness_importance: number
-    noise_tolerance: number
-    guest_frequency: number
-    sleep_schedule: string
-    work_schedule: string
-    social_preference: number
-    smoking: boolean
-    pets: boolean
-    overnight_guests: boolean
-    interests: string
-    notes: string
-  }): Promise<TenantPreference> => {
-    const { data } = await apiClient.post<TenantPreference>('/preferences/', preference)
+  // Operator endpoints
+  create: async (tenantId: string, data: TenantPreferenceCreate) => {
+    const response = await apiClient.post<TenantPreference>(`/preferences/?tenant_id=${tenantId}`, data)
+    return response.data
+  },
+
+  getByTenant: async (tenantId: string) => {
+    const { data } = await apiClient.get<TenantPreference>(`/preferences/${tenantId}`)
     return data
   },
 
-  getByTenant: async (tenantId: string): Promise<TenantPreference> => {
-    const { data } = await apiClient.get<TenantPreference>(`/preferences/tenant/${tenantId}`)
-    return data
+  update: async (tenantId: string, data: Partial<TenantPreferenceCreate>) => {
+    const { data: response } = await apiClient.put<TenantPreference>(`/preferences/${tenantId}`, data)
+    return response
   },
 
-  update: async (
-    preferenceId: string,
-    updates: Partial<TenantPreference>
-  ): Promise<TenantPreference> => {
-    const { data } = await apiClient.put<TenantPreference>(`/preferences/${preferenceId}`, updates)
-    return data
-  },
-
-  getMatches: async (tenantId: string, topN: number = 5): Promise<RoommateMatch[]> => {
-    const { data } = await apiClient.get<RoommateMatch[]>(`/preferences/matches/${tenantId}?top_n=${topN}`)
+  delete: async (tenantId: string) => {
+    const { data } = await apiClient.delete(`/preferences/${tenantId}`)
     return data
   },
 }

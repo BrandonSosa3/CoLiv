@@ -1,4 +1,4 @@
-import { apiClient } from '../api'
+import { apiClient } from './client'
 
 export interface TenantPreference {
   id: string
@@ -11,47 +11,35 @@ export interface TenantPreference {
   social_preference: number
   smoking: boolean
   pets: boolean
-  overnight_guests: boolean
-  interests: string
-  notes: string
+  interests?: string
+  about_me?: string
+  dietary_restrictions?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface RoommateMatch {
-  tenant_id: string
-  email: string
-  current_room_id: string
-  compatibility_score: number
-  breakdown: {
-    cleanliness: number
-    noise: number
-    sleep_schedule: number
-    social: number
-    guests: number
-    work_schedule: number
-    dealbreakers: number
-    interests: number
-  }
-  common_interests: string[]
+export interface TenantPreferenceUpdate {
+  cleanliness_importance?: number
+  noise_tolerance?: number
+  guest_frequency?: number
+  sleep_schedule?: string
+  work_schedule?: string
+  social_preference?: number
+  smoking?: boolean
+  pets?: boolean
+  interests?: string
+  about_me?: string
+  dietary_restrictions?: string
 }
 
 export const preferencesApi = {
-  getMy: async (): Promise<TenantPreference> => {
+  getMy: async () => {
     const { data } = await apiClient.get<TenantPreference>('/preferences/me')
     return data
   },
 
-  createMy: async (preference: Omit<TenantPreference, 'id' | 'tenant_id'>): Promise<TenantPreference> => {
-    const { data } = await apiClient.post<TenantPreference>('/preferences/me', preference)
-    return data
-  },
-
-  updateMy: async (updates: Partial<TenantPreference>): Promise<TenantPreference> => {
-    const { data } = await apiClient.put<TenantPreference>('/preferences/me', updates)
-    return data
-  },
-
-  getMyMatches: async (topN: number = 5): Promise<RoommateMatch[]> => {
-    const { data } = await apiClient.get<RoommateMatch[]>(`/preferences/my-matches?top_n=${topN}`)
-    return data
+  updateMy: async (data: TenantPreferenceUpdate) => {
+    const { data: response } = await apiClient.put<TenantPreference>('/preferences/me', data)
+    return response
   },
 }
