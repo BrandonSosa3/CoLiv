@@ -261,22 +261,6 @@ export function TenantsPage() {
           }}
         />
       )}
-
-          tenantId={selectedTenant.id}
-          tenantEmail={selectedTenant.email}
-          onClose={() => {
-            setSelectedTenant(null)
-          }}
-        />
-      )}
-
-          tenantId={selectedTenant.id}
-          tenantEmail={selectedTenant.email}
-          onClose={() => {
-            setSelectedTenant(null)
-          }}
-        />
-      )}
     </div>
   )
 }

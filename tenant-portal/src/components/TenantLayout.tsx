@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Home, Wrench, Megaphone, User, LogOut, Sparkles, DollarSign, FileText, MessageSquare } from 'lucide-react'
+import { Home, Wrench, Megaphone, User, LogOut, DollarSign, FileText, MessageSquare } from 'lucide-react'
 
 export function TenantLayout() {
   const navigate = useNavigate()
@@ -17,7 +17,6 @@ export function TenantLayout() {
     { path: '/maintenance', icon: Wrench, label: 'Maintenance' },
     { path: '/announcements', icon: Megaphone, label: 'Announcements' },
     { path: '/messages', icon: MessageSquare, label: 'Messages' },
-    { path: '/preferences', icon: Sparkles, label: 'Roommate Match' },
     { path: '/profile', icon: User, label: 'Profile' },
   ]
 
